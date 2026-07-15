@@ -1,0 +1,211 @@
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { parseRenewalFile, isContractWorksRow } from "@/lib/excelParser";
+import { uploadMetaSchema } from "@/lib/validation";
+import { Company, BookType, Prisma } from "@prisma/client";
+
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
+export async function POST(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== "SUPER_ADMIN") {
+    return NextResponse.json({ error: "Not authorized." }, { status: 403 });
+  }
+
+  const formData = await req.formData();
+  const file = formData.get("file") as File | null;
+  const company = formData.get("company") as string | null;
+  const bookType = formData.get("bookType") as string | null;
+
+  const meta = uploadMetaSchema.safeParse({ company, bookType });
+  if (!meta.success) {
+    return NextResponse.json({ error: "Select a company and book type." }, { status: 400 });
+  }
+
+  if (!file) {
+    return NextResponse.json({ error: "No file uploaded." }, { status: 400 });
+  }
+
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
+  let parsed;
+  try {
+    parsed = parseRenewalFile(buffer);
+  } catch (err) {
+    return NextResponse.json(
+      { error: "Could not read that file. Make sure it's a valid .xlsx or .csv export." },
+      { status: 400 }
+    );
+  }
+
+  if (parsed.rows.length === 0) {
+    return NextResponse.json(
+      { error: "No usable rows found in the file (check the file isn't empty)." },
+      { status: 400 }
+    );
+  }
+
+  const company_ = meta.data.company as Company;
+  const bookType_ = meta.data.bookType as BookType;
+
+  // The dropdown is a *filter mode*, not a blanket label. When the admin
+  // picks Contract Works, we don't just stamp every row in the file as
+  // Contract Works - we inspect each row's own Policy Description / Class of
+  // Risk / Category text and only tag the ones that actually say "Contract
+  // Works" as CONTRACT_WORKS. Everything else in that same file falls back
+  // to RENEWALS. When Renewals is selected, every row is tagged RENEWALS
+  // as before (a pure renewals export has no Contract Works lines to split
+  // out).
+  const rows = parsed.rows.map((row) => ({
+    row,
+    bookType: (bookType_ === "CONTRACT_WORKS"
+      ? isContractWorksRow(row)
+        ? "CONTRACT_WORKS"
+        : "RENEWALS"
+      : "RENEWALS") as BookType,
+  }));
+
+  const contractWorksCount = rows.filter((r) => r.bookType === "CONTRACT_WORKS").length;
+  const renewalsCount = rows.length - contractWorksCount;
+
+  const batch = await prisma.uploadBatch.create({
+    data: {
+      fileName: file.name,
+      company: company_,
+      bookType: bookType_,
+      uploadedById: session.user.id,
+      rowCount: parsed.rows.length,
+    },
+  });
+
+  // Look up every existing renewal for this book in a single query instead of
+  // one round trip per row - this is the difference between a few hundred
+  // milliseconds and potentially timing out on a large file.
+  // NOTE: we look across every bookType actually present in this upload
+  // (not just the dropdown value) because a row's real bookType is now
+  // decided by its own content. If we only looked under bookType_ here,
+  // a row that resolves to RENEWALS while CONTRACT_WORKS is selected (or
+  // vice versa on a repeat upload) would never match its existing record
+  // and would be inserted as a brand new duplicate instead of updated.
+  const policyNumbers = Array.from(new Set(rows.map((r) => r.row.policyNumber)));
+  const bookTypesInBatch = Array.from(new Set(rows.map((r) => r.bookType)));
+  const existingRenewals = await prisma.renewal.findMany({
+    where: {
+      company: company_,
+      bookType: { in: bookTypesInBatch },
+      policyNumber: { in: policyNumbers },
+    },
+    select: { id: true, policyNumber: true, renewalDate: true, bookType: true },
+  });
+
+  const existingMap = new Map<string, string>();
+  for (const r of existingRenewals) {
+    const key = `${r.policyNumber}|${(r.renewalDate ?? new Date(0)).toISOString()}|${r.bookType}`;
+    existingMap.set(key, r.id);
+  }
+
+  const toCreate: Prisma.RenewalCreateManyInput[] = [];
+  const toUpdate: { id: string; data: Prisma.RenewalUpdateInput }[] = [];
+
+  for (const { row, bookType } of rows) {
+    const renewalDate = row.renewalDate ?? new Date(0);
+    const key = `${row.policyNumber}|${renewalDate.toISOString()}|${bookType}`;
+    const existingId = existingMap.get(key);
+
+    const dataFields = {
+      externalId: row.externalId,
+      clientName: row.clientName,
+      classification: row.classification,
+      referenceCode: row.referenceCode,
+      classOfRisk: row.classOfRisk,
+      policyDescription: row.policyDescription,
+      insurer: row.insurer,
+      sourceSalesTeam: row.sourceSalesTeam,
+      serviceTeam: row.serviceTeam,
+      policyTeam: row.policyTeam,
+      authRepBroker: row.authRepBroker,
+      startDate: row.startDate ?? null,
+      paymentPlan: row.paymentPlan,
+      invoiceTotal: row.invoiceTotal ?? null,
+      policyCategory1: row.policyCategory1,
+      uploadBatchId: batch.id,
+    };
+
+    if (existingId) {
+      // Re-uploads refresh the source data but never touch assignment,
+      // status, or comments a manager/adviser has already set.
+      toUpdate.push({ id: existingId, data: dataFields });
+    } else {
+      toCreate.push({
+        ...dataFields,
+        policyNumber: row.policyNumber,
+        renewalDate,
+        company: company_,
+        bookType,
+        status: "UNASSIGNED",
+      });
+    }
+  }
+
+  if (toCreate.length > 0) {
+    await prisma.renewal.createMany({ data: toCreate, skipDuplicates: true });
+  }
+
+  // Catches the most common remaining real-world cause of "duplicates":
+  // someone re-uploading the same source file but picking a different
+  // Portfolio than last time. (Type is no longer a manual guess - it's
+  // derived from each row's own content above - so it's no longer a
+  // meaningful source of duplicate records and is excluded from this check.)
+  // This doesn't block the upload (the two Portfolios are legitimately
+  // different records), it just warns so it can be caught immediately
+  // instead of noticed weeks later.
+  let crossTypeDuplicateCount = 0;
+  if (toCreate.length > 0) {
+    const newPolicyNumbers = Array.from(new Set(toCreate.map((r) => r.policyNumber)));
+    const crossMatches = await prisma.renewal.findMany({
+      where: {
+        policyNumber: { in: newPolicyNumbers },
+        NOT: { company: company_ },
+      },
+      select: { policyNumber: true },
+      distinct: ["policyNumber"],
+    });
+    crossTypeDuplicateCount = crossMatches.length;
+  }
+
+  // Updates still need one query each (createMany has no "update on conflict"
+  // option), but batching them into chunked transactions pipelines the
+  // queries over the same connection instead of paying a full round trip
+  // for every single row.
+  const CHUNK_SIZE = 50;
+  for (let i = 0; i < toUpdate.length; i += CHUNK_SIZE) {
+    const chunk = toUpdate.slice(i, i + CHUNK_SIZE);
+    await prisma.$transaction(
+      chunk.map((u) => prisma.renewal.update({ where: { id: u.id }, data: u.data }))
+    );
+  }
+
+  const newCount = toCreate.length;
+  const updatedCount = toUpdate.length;
+
+  await prisma.uploadBatch.update({
+    where: { id: batch.id },
+    data: { newCount, updatedCount },
+  });
+
+  return NextResponse.json({
+    ok: true,
+    totalRows: parsed.totalRows,
+    skipped: parsed.skipped,
+    newCount,
+    updatedCount,
+    crossTypeDuplicateCount,
+    bookTypeFilterApplied: bookType_ === "CONTRACT_WORKS",
+    contractWorksCount,
+    renewalsCount,
+  });
+}

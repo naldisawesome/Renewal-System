@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADVISER
+  POLICY_SERVICE_ASSOCIATE
+  UNDERWRITER
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum Company {
+  CACTUS
+  BLANKET
+}
+
+enum BookType {
+  RENEWALS
+  CONTRACT_WORKS
+}
+
+enum RenewalStatus {
+  UNASSIGNED
+  ASSIGNED
+  IN_PROGRESS
+  CONTACTED
+  RENEWED
+  LOST
+  LAPSED
+}
+
+model User {
+  id                 String     @id @default(cuid())
+  name               String
+  email              String     @unique
+  passwordHash       String
+  role               Role       @default(ADVISER)
+  status             UserStatus @default(PENDING)
+  mustChangePassword Boolean    @default(false)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  assignedRenewals Renewal[]     @relation("AssignedAdviser")
+  underwrittenRenewals Renewal[] @relation("AssignedUnderwriter")
+  comments         Comment[]
+  uploads          UploadBatch[]
+  notifications    Notification[]
+  historyEntries   RenewalHistoryEntry[]
+}
+
+model UploadBatch {
+  id           String   @id @default(cuid())
+  fileName     String
+  company      Company
+  bookType     BookType
+  uploadedBy   User?    @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  uploadedById String?
+  rowCount     Int
+  newCount     Int      @default(0)
+  updatedCount Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  renewals Renewal[]
+}
+
+model Renewal {
+  id String @id @default(cuid())
+
+  // --- fields mapped 1:1 from the source export ---
+  externalId        String? // "Id" column
+  clientName        String
+  classification    String?
+  referenceCode     String?
+  policyNumber      String
+  classOfRisk       String?
+  policyDescription String?
+  insurer           String?
+  sourceSalesTeam   String? // original "Sales Team" text from the file - reference only
+  serviceTeam       String?
+  policyTeam        String?
+  authRepBroker     String?
+  startDate         DateTime?
+  renewalDate       DateTime?
+  paymentPlan       String?
+  invoiceTotal      Float?
+  policyCategory1   String?
+
+  // --- system fields ---
+  company  Company
+  bookType BookType
+
+  status            RenewalStatus @default(UNASSIGNED)
+  assignedAdviser   User?         @relation("AssignedAdviser", fields: [assignedAdviserId], references: [id], onDelete: SetNull)
+  assignedAdviserId String?
+
+  assignedUnderwriter   User?   @relation("AssignedUnderwriter", fields: [assignedUnderwriterId], references: [id], onDelete: SetNull)
+  assignedUnderwriterId String?
+
+  uploadBatch   UploadBatch? @relation(fields: [uploadBatchId], references: [id])
+  uploadBatchId String?
+
+  comments Comment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  notifications Notification[]
+  history       RenewalHistoryEntry[]
+
+  @@unique([policyNumber, renewalDate, company, bookType], name: "uniqueRenewalKey")
+  @@index([company, bookType])
+  @@index([assignedAdviserId])
+  @@index([assignedUnderwriterId])
+  @@index([status])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  body      String
+  renewal   Renewal  @relation(fields: [renewalId], references: [id], onDelete: Cascade)
+  renewalId String
+  author    User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  authorId  String?
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  renewal   Renewal  @relation(fields: [renewalId], references: [id], onDelete: Cascade)
+  renewalId String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+}
+
+model RenewalHistoryEntry {
+  id        String   @id @default(cuid())
+  renewal   Renewal  @relation(fields: [renewalId], references: [id], onDelete: Cascade)
+  renewalId String
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actorId   String?
+  message   String
+  createdAt DateTime @default(now())
+
+  @@index([renewalId])
+}
