@@ -1,0 +1,357 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADVISER
+  POLICY_SERVICE_ASSOCIATE
+  UNDERWRITER
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum Company {
+  CACTUS
+  BLANKET
+}
+
+enum BookType {
+  RENEWALS
+  CONTRACT_WORKS
+}
+
+// Workflow sequence (one-way, no skipping/backtracking - see src/lib/statusFlow.ts):
+// UNASSIGNED -> ASSIGNED -> IN_PROGRESS -> QUOTED -> CONTACTED -> RENEWED | CANCELLED | LAPSED
+// IN_PROGRESS/QUOTED are set by the assigned Underwriter; CONTACTED and the
+// three final outcomes are set by the assigned Adviser.
+enum RenewalStatus {
+  UNASSIGNED
+  ASSIGNED
+  IN_PROGRESS
+  QUOTED
+  CONTACTED
+  RENEWED
+  CANCELLED
+  LAPSED
+}
+
+model User {
+  id                 String     @id @default(cuid())
+  // firstName/lastName are the source of truth entered via the Add User /
+  // Edit User forms; `name` is kept in sync automatically (firstName + " " +
+  // lastName) so every other part of the app that already reads `name`
+  // (comments, mentions, assignments, notifications, etc.) keeps working
+  // without changes.
+  firstName          String
+  lastName           String
+  name               String
+  email              String     @unique
+  passwordHash       String
+  role               Role       @default(ADVISER)
+  status             UserStatus @default(PENDING)
+  mustChangePassword Boolean    @default(false)
+  // Profile photo, stored as a base64 data URL (no external object storage
+  // configured for this project). Kept nullable - falls back to an initial
+  // letter avatar when absent.
+  avatarUrl          String?    @db.Text
+  // Tracks when the password was last set, so Super Admin accounts can be
+  // forced to rotate their password periodically (see authorize() in
+  // lib/auth.ts). Set on register, admin-created accounts, change-password,
+  // and the seed-admin bootstrap.
+  passwordChangedAt  DateTime?
+  // Raised whenever this person's sessions must end now: password change, role change, suspension, deletion.
+  // Every signed-in session carries the number it started with and stops working once it no longer matches.
+  sessionVersion     Int        @default(0)
+  // Google sign-in: the Google account linked to this person (Google's stable id for it) and when it was
+  // first used. A person signs in with Google only with their own company account.
+  googleSub          String?
+  googleLinkedAt     DateTime?
+  // Morning email with what's due, overdue and waiting (each person can turn it off).
+  emailDigest        Boolean    @default(true)
+  // Soft delete: "deleting" a user from the Users page sets this instead of
+  // removing the row, so audit history / comments / history entries that
+  // reference them keep working. Deleted users are also flipped to
+  // status = SUSPENDED, which already blocks login and existing sessions
+  // (see the jwt callback's revalidation check).
+  deletedAt          DateTime?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  assignedRenewals Renewal[]     @relation("AssignedAdviser")
+  underwrittenRenewals Renewal[] @relation("AssignedUnderwriter")
+  comments         Comment[]
+  uploads          UploadBatch[]
+  notifications    Notification[]
+  historyEntries   RenewalHistoryEntry[]
+  auditActions     AuditLog[]    @relation("AuditActor")
+  auditedEvents    AuditLog[]    @relation("AuditTarget")
+  recordedOutcomes Renewal[]     @relation("OutcomeRecorder")
+  statusChanges    StatusChange[]
+  problems         ProblemEvent[]
+
+  @@index([role])
+  @@index([status])
+  @@index([deletedAt])
+  @@index([googleSub])
+}
+
+// Records who did what to which account - role changes, suspensions,
+// activations, approvals, and deletions. Written best-effort (never blocks
+// the action it's attached to) from the users API routes.
+model AuditLog {
+  id           String   @id @default(cuid())
+  action       String
+  actor        User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actorId      String?
+  targetUser   User?    @relation("AuditTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+  targetUserId String?
+  // Free-form JSON-as-text, e.g. {"from":"ADVISER","to":"SUPER_ADMIN"}.
+  metadata     String?  @db.Text
+  createdAt    DateTime @default(now())
+
+  @@index([targetUserId])
+  @@index([actorId])
+  @@index([createdAt])
+}
+
+// App-wide settings a Super Admin can change, such as whether password sign-in is still allowed.
+model AppSetting {
+  key         String   @id
+  value       String
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+}
+
+// Minimal Postgres-backed fixed-window rate limiter (see lib/rateLimit.ts).
+// Keyed by an arbitrary string the caller builds (e.g. "register:1.2.3.4"
+// or "login:someone@example.com") so it works across serverless instances
+// without needing Redis or a paid add-on.
+model RateLimitEntry {
+  key         String   @id
+  count       Int      @default(1)
+  windowStart DateTime @default(now())
+}
+
+model UploadBatch {
+  id           String    @id @default(cuid())
+  fileName     String
+  company      Company
+  // A batch is no longer forced into a single book type - each row's type is
+  // auto-detected from its own content, so a single upload can contain both
+  // Renewals and Contract Works rows. Kept nullable for that reason; the
+  // breakdown below is what actually describes the batch now.
+  bookType     BookType?
+  uploadedBy   User?     @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  uploadedById String?
+  rowCount     Int
+  newCount     Int       @default(0)
+  updatedCount Int       @default(0)
+  contractWorksCount Int @default(0)
+  renewalsCount      Int @default(0)
+  createdAt    DateTime  @default(now())
+
+  // Undo: a Super Admin can undo the latest upload.
+  undoneAt    DateTime?
+  undoneById  String?
+  ignoredColumns String[] @default([])
+
+  renewals Renewal[]
+  changes  UploadChange[]
+}
+
+model Renewal {
+  id String @id @default(cuid())
+
+  // --- fields mapped 1:1 from the source export ---
+  externalId        String? // "Id" column
+  clientName        String
+  classification    String?
+  referenceCode     String?
+  policyNumber      String
+  classOfRisk       String?
+  policyDescription String?
+  insurer           String?
+  sourceSalesTeam   String? // original "Sales Team" text from the file - reference only
+  serviceTeam       String?
+  policyTeam        String?
+  authRepBroker     String?
+  startDate         DateTime?
+  renewalDate       DateTime?
+  paymentPlan       String?
+  invoiceTotal      Float?
+  policyCategory1   String?
+
+  // --- system fields ---
+  company  Company
+  bookType BookType
+
+  // Precise per-row identity used by the bulk upload matcher (see
+  // computeDedupeKey in excelParser.ts). Nullable because rows created
+  // before this field existed, or via the manual Add Renewal form, won't
+  // have one until they're next matched by an upload.
+  //
+  // Policy Number + Renewal Date + Company + Book Type is deliberately NOT
+  // a unique constraint: a single policy can legitimately have several
+  // distinct coverage lines that share all four (e.g. a main policy plus a
+  // Contract Works extension, or several classes of business on one
+  // renewal), and enforcing uniqueness on that tuple silently drops every
+  // row after the first during upload.
+  dedupeKey String? @unique
+
+  // --- client contact details: not in the source export, filled in by the team ---
+  contactName   String?
+  contactEmail  String?
+  contactPhone  String?
+  clientAddress String?
+
+  // Fields someone has edited by hand on the renewal page. A later upload never overwrites these
+  // (and a blank cell in an upload never erases any field).
+  manualFields String[] @default([])
+
+  // --- the real outcome, recorded when the renewal is marked Renewed, Cancelled or Lapsed ---
+  outcomeReason   String? // why it was lost (Cancelled/Lapsed)
+  outcomePremium  Float? // the premium it renewed at
+  outcomeInsurer  String? // who it renewed with
+  outcomeNote     String? @db.Text
+  outcomeAt       DateTime?
+  outcomeBy       User?   @relation("OutcomeRecorder", fields: [outcomeById], references: [id], onDelete: SetNull)
+  outcomeById     String?
+
+  // --- next follow-up: when to contact the client next, and why ---
+  followUpAt        DateTime? // a calendar date, stored as midnight UTC like renewalDate
+  followUpNote      String?
+  followUpRemindedAt DateTime? // set when the reminder for followUpAt has been sent
+
+  // --- the quote, recorded when the underwriter marks it Quoted ---
+  quotedPremium Float?
+  quotedAt      DateTime?
+
+  // When the status last changed (how long it has been at its current step).
+  statusChangedAt DateTime?
+
+  // The last deadline reminder sent to the assigned people ("30", "14", "7", "3" or "today"),
+  // so each reminder goes out once.
+  lastDueAlert String?
+
+  status            RenewalStatus @default(UNASSIGNED)
+  assignedAdviser   User?         @relation("AssignedAdviser", fields: [assignedAdviserId], references: [id], onDelete: SetNull)
+  assignedAdviserId String?
+
+  assignedUnderwriter   User?   @relation("AssignedUnderwriter", fields: [assignedUnderwriterId], references: [id], onDelete: SetNull)
+  assignedUnderwriterId String?
+
+  uploadBatch   UploadBatch? @relation(fields: [uploadBatchId], references: [id])
+  uploadBatchId String?
+
+  comments Comment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  notifications Notification[]
+  history       RenewalHistoryEntry[]
+  statusChanges StatusChange[]
+
+  @@index([policyNumber, renewalDate, company, bookType])
+  @@index([company, bookType])
+  @@index([assignedAdviserId])
+  @@index([assignedUnderwriterId])
+  @@index([status])
+  @@index([status, renewalDate])
+  @@index([followUpAt])
+}
+
+// Every status change, with when it happened, so the time spent at each step can be measured.
+model StatusChange {
+  id        String   @id @default(cuid())
+  renewal   Renewal  @relation(fields: [renewalId], references: [id], onDelete: Cascade)
+  renewalId String
+  from      String
+  to        String
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actorId   String?
+  createdAt DateTime @default(now())
+
+  @@index([renewalId, createdAt])
+  @@index([createdAt])
+}
+
+// What each upload changed, so the latest upload can be undone: the renewals it added, and for the ones it
+// updated, the values before and after.
+model UploadChange {
+  id        String      @id @default(cuid())
+  batch     UploadBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  batchId   String
+  renewalId String
+  kind      String // "CREATED" or "UPDATED"
+  before    Json?
+  after     Json?
+
+  @@index([batchId])
+}
+
+// Errors people ran into (in the browser or on the server), so a Super Admin hears about them.
+model ProblemEvent {
+  id        String   @id @default(cuid())
+  signature String // where + message, used to group repeats
+  source    String // "browser" or "server"
+  message   String   @db.Text
+  detail    String?  @db.Text
+  url       String?
+  digest    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId    String?
+  count     Int      @default(1)
+  firstAt   DateTime @default(now())
+  lastAt    DateTime @default(now())
+  resolved  Boolean  @default(false)
+
+  @@index([signature])
+  @@index([lastAt])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  body      String
+  renewal   Renewal  @relation(fields: [renewalId], references: [id], onDelete: Cascade)
+  renewalId String
+  author    User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  authorId  String?
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  renewal   Renewal  @relation(fields: [renewalId], references: [id], onDelete: Cascade)
+  renewalId String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+}
+
+model RenewalHistoryEntry {
+  id        String   @id @default(cuid())
+  renewal   Renewal  @relation(fields: [renewalId], references: [id], onDelete: Cascade)
+  renewalId String
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actorId   String?
+  message   String
+  createdAt DateTime @default(now())
+
+  @@index([renewalId])
+}
