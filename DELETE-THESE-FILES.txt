@@ -1,0 +1,5 @@
+Delete this file from your GitHub repository (the old always-on notification connection, no longer used):
+
+  src/app/api/notifications/stream/route.ts
+
+Everything else in this zip is new or replaces a file with the same path.
