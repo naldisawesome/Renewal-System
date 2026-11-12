@@ -1,0 +1,29 @@
+Optional clean-up after uploading this zip to GitHub.
+
+These files are no longer used. In this zip each one is an empty stub (or a one-line redirect), so the build works
+whether or not you delete them. Deleting them on GitHub just keeps the repository tidy.
+
+Empty stubs, safe to delete:
+  src/app/admin/OverviewView.tsx
+  src/app/admin/allocate/AllocateTable.tsx
+  src/app/admin/allocate/ReassignDialog.tsx        (moved to src/app/admin/renewals/ReassignDialog.tsx)
+  src/app/admin/renewals/SavedViews.tsx
+  src/app/workspace/WidgetPicker.tsx
+  src/components/PipelineViewSwitch.tsx
+  src/components/WhatsNew.tsx
+  src/lib/whatsNew.ts
+  src/app/api/account/widgets/route.ts
+  src/app/api/saved-views/route.ts
+  src/app/api/saved-views/[id]/route.ts
+
+Still on the list from before:
+  src/app/api/notifications/stream/route.ts
+
+Keep these (they redirect old addresses and bookmarks to the new place):
+  src/app/admin/page.tsx                -> /admin/renewals
+  src/app/admin/allocate/page.tsx       -> /admin/renewals
+  src/app/admin/tools/page.tsx          -> /admin/renewals
+  src/app/workspace/calendar/page.tsx   -> /workspace/board
+
+Nothing in the database was changed or removed. The SavedView table and the User.workspaceWidgets and
+User.showExtras columns are simply no longer read.
