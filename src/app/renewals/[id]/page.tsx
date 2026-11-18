@@ -9,9 +9,7 @@ import PolicyDetailsCard from "./PolicyDetailsCard";
 import DeleteRenewalButton from "./DeleteRenewalButton";
 import OutcomeCard from "./OutcomeCard";
 import FollowUpCard from "./FollowUpCard";
-import StageTrack from "@/components/StageTrack";
 import DetailTabs from "./DetailTabs";
-import { nextStepText } from "@/lib/plainWords";
 import { Feature } from "@/components/FeatureProvider";
 import { markStuck } from "@/lib/stuck";
 import ClientPolicies from "./ClientPolicies";
@@ -118,7 +116,7 @@ export default async function RenewalDetailPage({ params }: { params: { id: stri
     ["Underwriter", renewal.assignedUnderwriter?.name || <span className="text-slate-500 dark:text-slate-400">Not assigned</span>],
   ];
 
-  const step = nextStepText(renewal.status, { role: session.user.role, isOwner }, { adviser: renewal.assignedAdviser?.name, underwriter: renewal.assignedUnderwriter?.name });
+  const latestNote = renewal.comments.length ? renewal.comments[renewal.comments.length - 1] : null;
 
   return (
       <main className="page" style={{ maxWidth: 1240 }}>
@@ -140,14 +138,22 @@ export default async function RenewalDetailPage({ params }: { params: { id: stri
         </header>
 
         {/* Where it is, what happens next, and the one action for the person looking at it. */}
-        <section aria-label="Progress and next step" className="card mb-5 grid lg:grid-cols-[minmax(0,1fr)_21rem]">
+        {/* The latest note, so the most recent word on this renewal is the first thing seen. */}
+        <section aria-label="Latest note" className="card mb-5 grid lg:grid-cols-[minmax(0,1fr)_21rem]">
           <div className="p-5 sm:p-6">
-            <StageTrack status={renewal.status} />
-            <div className="mt-6 border-t border-slate-100 pt-4 dark:border-slate-800">
-              <p className="text-[0.75rem] text-slate-500 dark:text-slate-400">Next step</p>
-              <p className="mt-0.5 text-[1.0625rem] font-semibold tracking-[-0.01em] text-slate-900 dark:text-slate-50">{step.title}</p>
-              {step.body && <p className="mt-1 max-w-[60ch] text-[0.875rem] text-slate-600 dark:text-slate-300">{step.body}</p>}
-            </div>
+            <p className="text-[0.75rem] text-slate-500 dark:text-slate-400">Latest note</p>
+            {latestNote ? (
+              <>
+                <p className="mt-1.5 line-clamp-3 max-w-[70ch] whitespace-pre-line text-[0.9375rem] leading-relaxed text-slate-900 dark:text-slate-100">{latestNote.body}</p>
+                <p className="mt-2 text-[0.8125rem] text-slate-500 dark:text-slate-400">
+                  {latestNote.author?.name ?? "Someone"},{" "}
+                  {latestNote.createdAt.toLocaleString("en-NZ", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "Pacific/Auckland" })}
+                  {renewal.comments.length > 1 && <span>. {renewal.comments.length - 1} earlier in Activity below.</span>}
+                </p>
+              </>
+            ) : (
+              <p className="mt-1.5 text-[0.9375rem] text-slate-500 dark:text-slate-400">No notes yet. Add one in Activity below.</p>
+            )}
           </div>
           <div id="status-control" className="border-t border-slate-200 bg-slate-50/60 p-5 dark:border-slate-800 dark:bg-slate-950/30 lg:rounded-r-xl lg:border-l lg:border-t-0">
             {canChangeStatus ? (

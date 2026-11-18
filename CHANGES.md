@@ -1,3 +1,13 @@
+# Update 2026-11-19: renewal page shows the latest note
+
+- The progress track and "Next step" panel at the top of a renewal are removed (they repeated what the CRM shows).
+  In their place is the **latest note**: what it says, who wrote it and when, and how many earlier notes are in
+  Activity. With no notes yet it says so.
+- The status box on the right is unchanged.
+- No database changes. `src/components/StageTrack.tsx` is now an empty stub (listed in `DELETE-THESE-FILES.txt`).
+
+---
+
 # Update 2026-11-13: uploads only add, and a faster file reader
 
 ## After you deploy

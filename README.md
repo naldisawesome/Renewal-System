@@ -111,8 +111,7 @@ and are shown and treated exactly as Needs quote (no data was migrated).
   Renewal month, Portfolio, Type, Adviser, Underwriter and Sales team. The list opens with the filters you used
   last. Select rows for the actions bar: Assign (one person, remove, or share evenly), hand-over note, Set
   follow-up, Delete. "Move someone's renewals" moves a whole list between people.
-- **Renewal page.** Progress track, a Next step sentence for the person looking, key facts, then Activity and Policy
-  details as tabs. Follow-up and the client's other policies are on the right.
+- **Renewal page.** The latest note and the status box, key facts, then Activity and Policy details as tabs. Follow-up and the client's other policies are on the right.
 - **Upload.** Uploads only add what is missing; nothing already in the system is changed or removed (details,
   status, allocation, notes). Choose "New renewals and contract works" or "New contract works only". Every upload
   is previewed before saving and the latest one can be undone. The heading row can be anywhere in the first 15
@@ -127,7 +126,7 @@ and are shown and treated exactly as Needs quote (no data was migrated).
   Allocate, Admin tools and Overview pages. Their old addresses redirect. See `CHANGES.md`.
 - **Design system.** Colours and type are defined once in `tailwind.config.ts` and `src/app/globals.css`
   (`slate` = neutral, `brand` = jade accent, `ink` = the actions bar and sign-in panel). Shared building blocks: `Runway` (due-date stops),
-  `StageTrack` (progress), `CommandSearch`, `InsightsTabs`.
+  `CommandSearch`, `InsightsTabs`.
 
 ## Owner and feature switches
 

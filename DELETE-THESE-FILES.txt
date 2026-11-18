@@ -12,6 +12,7 @@ Empty stubs, safe to delete:
   src/components/PipelineViewSwitch.tsx
   src/components/WhatsNew.tsx
   src/lib/whatsNew.ts
+  src/components/StageTrack.tsx
   src/app/api/account/widgets/route.ts
   src/app/api/saved-views/route.ts
   src/app/api/saved-views/[id]/route.ts
