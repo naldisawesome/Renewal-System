@@ -1,3 +1,4 @@
+import { notifyAgent } from "@/lib/agent";
 import { featureOff } from "@/lib/featureFlags";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
@@ -41,6 +42,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     session.user.id,
     label ? `${session.user.name} set a follow-up for ${label}${parsed.data.note ? `: ${parsed.data.note}` : ""}.` : `${session.user.name} cleared the follow-up.`
   );
+
+  await notifyAgent("renewal.follow_up_set", { renewalId: params.id, clientName: updated.clientName, date: date ? date.toISOString().slice(0, 10) : null, note: updated.followUpNote, by: session.user.name });
 
   return NextResponse.json({ ok: true, followUpAt: updated.followUpAt, followUpNote: updated.followUpNote });
 }

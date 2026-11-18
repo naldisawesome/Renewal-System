@@ -1,3 +1,4 @@
+import { notifyAgent } from "@/lib/agent";
 import { featureOff } from "@/lib/featureFlags";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
@@ -59,5 +60,6 @@ export async function POST(req: Request) {
     },
   });
   await logAudit(session.user.id, "RENEWALS_REASSIGNED", to.id, { count: ids.length, fromName: from.name, toName: to.name, as, scope });
+  await notifyAgent("renewals.assigned", { renewalIds: ids, as: role, from: from.name, to: to.name, by: session.user.name, note: note || null });
   return NextResponse.json({ ok: true, count: ids.length });
 }

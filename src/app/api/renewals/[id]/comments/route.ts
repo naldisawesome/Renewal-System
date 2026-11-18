@@ -1,3 +1,4 @@
+import { notifyAgent } from "@/lib/agent";
 import { featureOff } from "@/lib/featureFlags";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
@@ -73,7 +74,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       authorId: session.user.id,
     },
     include: { author: { select: { name: true } } },
-  });
+  });  await notifyAgent("renewal.note_added", { renewalId: params.id, clientName: renewal.clientName, policyNumber: renewal.policyNumber, by: session.user.name, text: comment.body });
+
 
   // Notify the assigned adviser (if someone else posted) and anyone who has
   // previously left a note on this renewal, so a reply reaches everyone

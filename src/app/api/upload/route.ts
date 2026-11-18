@@ -1,3 +1,4 @@
+import { notifyAgent } from "@/lib/agent";
 import { featureOff } from "@/lib/featureFlags";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
@@ -101,6 +102,9 @@ export async function POST(req: Request) {
     }
 
     await prisma.uploadBatch.update({ where: { id: batch.id }, data: { newCount: created.length, updatedCount: 0 } });
+    if (created.length) {
+      await notifyAgent("renewals.added", { uploadId: batch.id, portfolio: company_ === "BLANKET" ? "Blanket" : "Cactus", count: created.length, renewalIds: created.map((r) => r.id).slice(0, 1000), by: session.user.name });
+    }
     await logAudit(session.user.id, "UPLOAD_COMPLETED", null, {
       fileName: file.name.slice(0, 200),
       company: company_,

@@ -27,6 +27,7 @@ export const FEATURES: FeatureDef[] = [
   { key: "announcements", group: "Admin", label: "Announcements", description: "Writing announcements, and the banner everyone sees." },
   { key: "system_health", group: "Admin", label: "System health", description: "The System page with its checks and problem reports." },
   { key: "backup", group: "Admin", label: "Backup download", description: "Downloading a full backup to Excel." },
+  { key: "ai_agent", group: "Admin", label: "AI agent connection", description: "Sending events to the company AI agent and letting it look renewals up." },
 
   { key: "renewals", group: "Core (always on)", locked: true, label: "Renewals and renewal pages", description: "The lists, a renewal's details, status changes and outcomes." },
   { key: "users", group: "Core (always on)", locked: true, label: "Users and sign-in", description: "Accounts, sign-in, passwords and approvals." },

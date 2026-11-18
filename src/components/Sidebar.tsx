@@ -41,6 +41,7 @@ export function navFor(role: Role, showExtras = false, owner = false): NavItem[]
       { href: "/admin/announcements", label: "Announcements", icon: MessageIcon, section: "Settings", features: ["announcements"] },
       { href: "/admin/audit-log", label: "Audit log", icon: ShieldIcon, section: "Settings", features: ["audit_log"] },
       { href: "/admin/system", label: "System health", icon: RefreshIcon, section: "Settings", features: ["system_health"] },
+      { href: "/admin/ai-agent", label: "AI agent", icon: SettingsIcon, section: "Settings", features: ["ai_agent"] },
       ...(owner ? [{ href: "/admin/features", label: "Feature switches", icon: SettingsIcon, section: "Settings", ownerOnly: true } as NavItem] : []),
     ];
   }

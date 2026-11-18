@@ -119,6 +119,10 @@ and are shown and treated exactly as Needs quote (no data was migrated).
 - **Insights.** Forecast, Time at each step, Outcomes.
 - **Stuck tag, quick notes, Today line, bulk follow-up** work as before. Underwriters also see how many renewals
   are waiting for their quote.
+- **AI agent (Settings).** Room for the company AI agent: the system sends it events (renewals added, assigned,
+  status changes, notes, follow-ups) and the agent can look renewals up read-only. Off until set up in Vercel with
+  `AI_AGENT_WEBHOOK_URL`, `AI_AGENT_SECRET` (optional), `AI_AGENT_EVENTS` (optional) and `AI_AGENT_API_KEY`. The
+  page has the setup details for IT and a test button. Code: `src/lib/agent.ts`, `src/app/api/agent/`.
 - **Feature switches (owner only).** Every switchable feature with an on/off switch and an optional message. Off
   means hidden for everyone except the owner; pages show a "switched off for now" page and the matching APIs
   answer 503. Changes reach everyone within about 5 seconds. Every change is in the Audit log.

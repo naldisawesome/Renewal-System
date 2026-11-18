@@ -1,3 +1,26 @@
+# Update 2026-11-19: room for the company AI agent
+
+Ready for IT to plug the company AI agent in. Nothing happens until it is set up in Vercel, so this deploy changes
+nothing for anyone.
+
+- **The system tells the agent** when renewals are added by an upload, assigned or moved, change status (including
+  outcomes), get a note, or get a follow-up date. Each is a JSON POST to the agent's address, optionally signed
+  with a shared secret.
+- **The agent asks the system** (read-only): it can list renewals by search, status, due date, adviser or
+  underwriter, and open one renewal with its last 20 notes. It can't change anything.
+- **Settings → AI agent** (Super Admins) shows whether each side is set up, which events are sent, a "Send a test"
+  button, and the setup details to hand to IT. Keys and addresses are never shown.
+- **Feature switches** has a new "AI agent connection" switch for the owner.
+- Sending never slows down or breaks what someone is doing: it waits at most 3 seconds, and failures appear on
+  System health.
+
+**Vercel settings (when IT is ready):** `AI_AGENT_WEBHOOK_URL`, optional `AI_AGENT_SECRET`, optional
+`AI_AGENT_EVENTS`, and `AI_AGENT_API_KEY`. Redeploy after setting them.
+
+No database changes. 164 tests (new: agent connection, and the access test now covers the agent routes).
+
+---
+
 # Update 2026-11-19: renewal page shows the latest note
 
 - The progress track and "Next step" panel at the top of a renewal are removed (they repeated what the CRM shows).

@@ -1,3 +1,4 @@
+import { notifyAgent } from "@/lib/agent";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -117,6 +118,17 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       outcome: `${STATUS_LABELS[nextStatus]}${summary}`,
     });
   }
+
+  await notifyAgent("renewal.status_changed", {
+    renewalId: renewal.id,
+    clientName: renewal.clientName,
+    policyNumber: renewal.policyNumber,
+    from: renewal.status,
+    to: nextStatus,
+    quotedPremium: (quoteData.quotedPremium as number | undefined) ?? null,
+    outcome: isOutcome ? outcomeData : null,
+    by: session.user.name,
+  });
 
   return NextResponse.json({ ok: true, renewal: updated });
 }
