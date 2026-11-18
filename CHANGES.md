@@ -1,3 +1,12 @@
+# Fix 2026-11-19: Clear filters on Renewals now really clears
+
+Clearing the filters (or removing the last filter chip, or turning off a due-date stop) on Renewals used to bring
+the same filters straight back, because the page restored the "remembered filters" before the memory had been
+updated. The new choice is now saved the moment you click, so clearing shows every renewal and opening Renewals
+later from the menu remembers the cleared state. No database changes. Tests: 166.
+
+---
+
 # Update 2026-11-19: room for the company AI agent
 
 Ready for IT to plug the company AI agent in. Nothing happens until it is set up in Vercel, so this deploy changes

@@ -7,6 +7,7 @@ import { SearchIcon } from "@/components/icons";
 import { startProgress } from "@/components/NavProgress";
 import { DUE_FILTER_OPTIONS } from "@/lib/deadlines";
 import { Feature } from "@/components/FeatureProvider";
+import { rememberedQuery, saveFilterMemory } from "@/lib/filterMemory";
 
 /**
  * Search and filters for All Renewals, in one toolbar. Search stays visible; every other filter lives in one Filters panel,
@@ -38,6 +39,7 @@ export default function FilterBar({
     Object.entries(merged).forEach(([k, v]) => {
       if (v) usp.set(k, v);
     });
+    saveFilterMemory(rememberedQuery(usp));
     startProgress();
     startTransition(() => router.push(`/admin/renewals?${usp.toString()}`));
   }
@@ -108,6 +110,7 @@ export default function FilterBar({
   function clearAll() {
     setQ("");
     setOpen(false);
+    saveFilterMemory("");
     startProgress();
     startTransition(() => router.push("/admin/renewals"));
   }
