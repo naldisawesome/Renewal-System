@@ -279,7 +279,8 @@ terminal instead of a browser.
 **As an adviser:**
 1. Register at `/register`, wait for approval.
 2. Once approved, **My Renewals** shows everything assigned to you, 50 at a time (Previous / Next under the
-   list), with status tabs, the deadline band, and filters for search, portfolio, book and renewal month.
+   list), with status tabs, the deadline band, and filters for search (updates as you type), portfolio, book and
+   renewal month.
 3. Open a renewal to update its status (Needs quote → Quoted → Contacted → Renewed/Cancelled/Lapsed)
    and leave notes for the manager or your future self.
 4. If the same client has a policy with someone else, open it from "Other policies for this client" and use

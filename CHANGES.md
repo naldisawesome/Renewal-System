@@ -1,3 +1,11 @@
+# Fix 2026-11-19: My renewals search works as you type
+
+The search box on My renewals now updates the list a moment after you stop typing (or straight away on Enter),
+instead of waiting until you click out of the box. The cursor stays in the box, and clearing it with the × shows
+the full list again. No database changes.
+
+---
+
 # Update 2026-11-19: My renewals shows 50 at a time, with filters, and fits the screen
 
 - **50 per page.** My renewals now lists 50 renewals at a time, soonest first, with "Showing 1–50 of 444" and
