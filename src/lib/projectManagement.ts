@@ -107,6 +107,8 @@ export async function sendToProjectManagement(f: Feedback): Promise<{ key: strin
   if (!pmConfig().configured) throw new PmError("The project management connection isn't set up yet (PM_URL and PM_API_TOKEN).");
   const project = await pmProject();
   const body = await call("/api/v1/tasks", { method: "POST", body: JSON.stringify(buildTask(f, project.id)) });
-  const n = body?.data?.number;
-  return { key: n != null ? `${project.key}-${n}` : project.key };
+  // Not-Jira answers { data: { id, key: "RNL-12" } }; older versions sent the task row with its number.
+  const d = body?.data ?? {};
+  const key = typeof d.key === "string" && d.key ? d.key : d.number != null ? `${project.key}-${d.number}` : project.key;
+  return { key };
 }

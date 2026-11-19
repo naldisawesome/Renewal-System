@@ -1,3 +1,11 @@
+# Fix 2026-11-20: bug report confirmation shows the full task number
+
+After sending a bug report or request, the confirmation said "in the project tracker as RNL" without the number.
+The task was created correctly; the Renewal System was reading the wrong field from Not-Jira's reply (it returns
+the full key, e.g. RNL-12). It now shows the full task number. No database changes.
+
+---
+
 # Update 2026-11-20: Report a bug or request a change, sent to the project management system
 
 - **New bug icon in the top bar** for everyone. It opens a form with two choices, "Something's wrong" and "I'd like

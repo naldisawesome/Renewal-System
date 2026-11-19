@@ -25,7 +25,8 @@ beforeEach(() => {
   vi.stubGlobal("fetch", async (url: string, init: any) => {
     calls.push({ url, init });
     if (url.endsWith("/api/v1/projects")) return new Response(JSON.stringify({ data: [{ id: "p-form", key: "FORM" }, { id: "p-rnl", key: "RNL", name: "Renewal System" }] }));
-    return new Response(JSON.stringify({ data: { number: 142 } }), { status: 201 });
+    // The real Not-Jira reply to POST /api/v1/tasks.
+    return new Response(JSON.stringify({ data: { id: "4f1c2d7e-0000-4000-8000-000000000001", key: "RNL-142" } }), { status: 201 });
   });
 });
 afterEach(() => vi.unstubAllGlobals());
@@ -54,6 +55,14 @@ describe("POST /api/feedback", () => {
     const post = calls.find((c) => c.url === "https://pm.example.com/api/v1/tasks")!;
     expect(post.init.headers.Authorization).toBe("Bearer tsk_test");
     expect(JSON.parse(post.init.body).projectId).toBe("p-rnl");
+  });
+  it("still works with a reply that only has the task number", async () => {
+    vi.stubGlobal("fetch", async (url: string) =>
+      url.endsWith("/api/v1/projects")
+        ? new Response(JSON.stringify({ data: [{ id: "p-rnl", key: "RNL" }] }))
+        : new Response(JSON.stringify({ data: { number: 7 } }), { status: 201 })
+    );
+    expect((await (await send(bug)).json()).key).toBe("RNL-7");
   });
   it("needs a signed-in user and a title", async () => {
     expect((await send({ ...bug, title: "" })).status).toBe(400);
