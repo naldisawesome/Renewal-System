@@ -126,9 +126,12 @@ export default async function RenewalDetailPage({ params }: { params: { id: stri
           <div className="min-w-0">
             <h1 className="page-title">{renewal.clientName}</h1>
             <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.875rem] text-slate-500 dark:text-slate-400">
-              <span>
-                Policy {renewal.policyNumber}
-                {renewal.insurer ? `, ${renewal.insurer}` : ""}
+              <span className="flex flex-wrap items-baseline gap-x-2">
+                <span className="text-[1.125rem] font-semibold tracking-[-0.01em] text-slate-900 dark:text-slate-50">
+                  <span className="sr-only">Policy </span>
+                  {renewal.policyNumber}
+                </span>
+                {renewal.insurer && <span>{renewal.insurer}</span>}
               </span>
               <CompanyBadge company={renewal.company} />
               <BookTypeBadge bookType={renewal.bookType} />

@@ -1,3 +1,9 @@
+# Update 2026-11-19: policy number stands out on the renewal page
+
+The policy number under the client's name is now larger and bold, with the insurer beside it. No database changes.
+
+---
+
 # Fix 2026-11-19: Clear filters on Renewals now really clears
 
 Clearing the filters (or removing the last filter chip, or turning off a due-date stop) on Renewals used to bring
