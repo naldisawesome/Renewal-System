@@ -96,18 +96,20 @@ model User {
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 
-  assignedRenewals Renewal[]     @relation("AssignedAdviser")
-  underwrittenRenewals Renewal[] @relation("AssignedUnderwriter")
-  comments         Comment[]
-  uploads          UploadBatch[]
-  notifications    Notification[]
-  historyEntries   RenewalHistoryEntry[]
-  auditActions     AuditLog[]    @relation("AuditActor")
-  auditedEvents    AuditLog[]    @relation("AuditTarget")
-  recordedOutcomes Renewal[]     @relation("OutcomeRecorder")
-  statusChanges    StatusChange[]
-  problems         ProblemEvent[]
-  savedViews       SavedView[]
+  assignedRenewals     Renewal[]             @relation("AssignedAdviser")
+  underwrittenRenewals Renewal[]             @relation("AssignedUnderwriter")
+  comments             Comment[]
+  uploads              UploadBatch[]
+  notifications        Notification[]
+  historyEntries       RenewalHistoryEntry[]
+  auditActions         AuditLog[]            @relation("AuditActor")
+  auditedEvents        AuditLog[]            @relation("AuditTarget")
+  recordedOutcomes     Renewal[]             @relation("OutcomeRecorder")
+  statusChanges        StatusChange[]
+  problems             ProblemEvent[]
+  savedViews           SavedView[]
+  transferRequests     TransferRequest[]     @relation("TransferRequester")
+  transferDecisions    TransferRequest[]     @relation("TransferDecider")
 
   @@index([role])
   @@index([status])
@@ -153,27 +155,27 @@ model RateLimitEntry {
 }
 
 model UploadBatch {
-  id           String    @id @default(cuid())
-  fileName     String
-  company      Company
+  id                 String    @id @default(cuid())
+  fileName           String
+  company            Company
   // A batch is no longer forced into a single book type - each row's type is
   // auto-detected from its own content, so a single upload can contain both
   // Renewals and Contract Works rows. Kept nullable for that reason; the
   // breakdown below is what actually describes the batch now.
-  bookType     BookType?
-  uploadedBy   User?     @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
-  uploadedById String?
-  rowCount     Int
-  newCount     Int       @default(0)
-  updatedCount Int       @default(0)
-  contractWorksCount Int @default(0)
-  renewalsCount      Int @default(0)
-  createdAt    DateTime  @default(now())
+  bookType           BookType?
+  uploadedBy         User?     @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  uploadedById       String?
+  rowCount           Int
+  newCount           Int       @default(0)
+  updatedCount       Int       @default(0)
+  contractWorksCount Int       @default(0)
+  renewalsCount      Int       @default(0)
+  createdAt          DateTime  @default(now())
 
   // Undo: a Super Admin can undo the latest upload.
-  undoneAt    DateTime?
-  undoneById  String?
-  ignoredColumns String[] @default([])
+  undoneAt       DateTime?
+  undoneById     String?
+  ignoredColumns String[]  @default([])
 
   renewals Renewal[]
   changes  UploadChange[]
@@ -229,17 +231,17 @@ model Renewal {
   manualFields String[] @default([])
 
   // --- the real outcome, recorded when the renewal is marked Renewed, Cancelled or Lapsed ---
-  outcomeReason   String? // why it was lost (Cancelled/Lapsed)
-  outcomePremium  Float? // the premium it renewed at
-  outcomeInsurer  String? // who it renewed with
-  outcomeNote     String? @db.Text
-  outcomeAt       DateTime?
-  outcomeBy       User?   @relation("OutcomeRecorder", fields: [outcomeById], references: [id], onDelete: SetNull)
-  outcomeById     String?
+  outcomeReason  String? // why it was lost (Cancelled/Lapsed)
+  outcomePremium Float? // the premium it renewed at
+  outcomeInsurer String? // who it renewed with
+  outcomeNote    String?   @db.Text
+  outcomeAt      DateTime?
+  outcomeBy      User?     @relation("OutcomeRecorder", fields: [outcomeById], references: [id], onDelete: SetNull)
+  outcomeById    String?
 
   // --- next follow-up: when to contact the client next, and why ---
-  followUpAt        DateTime? // a calendar date, stored as midnight UTC like renewalDate
-  followUpNote      String?
+  followUpAt         DateTime? // a calendar date, stored as midnight UTC like renewalDate
+  followUpNote       String?
   followUpRemindedAt DateTime? // set when the reminder for followUpAt has been sent
 
   // --- the quote, recorded when the underwriter marks it Quoted ---
@@ -268,9 +270,10 @@ model Renewal {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  notifications Notification[]
-  history       RenewalHistoryEntry[]
-  statusChanges StatusChange[]
+  notifications    Notification[]
+  history          RenewalHistoryEntry[]
+  statusChanges    StatusChange[]
+  transferRequests TransferRequest[]
 
   @@index([policyNumber, renewalDate, company, bookType])
   @@index([company, bookType])
@@ -382,12 +385,12 @@ model SavedView {
 // A message a Super Admin posts for everyone at the top of the app. Only the newest active one shows;
 // posting a new one switches the old one off. People can dismiss it on their own screen.
 model Announcement {
-  id         String   @id @default(cuid())
-  message    String   @db.Text
-  tone       String   @default("info") // "info" or "warning"
-  active     Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  createdBy  String? // their name when posted, kept as plain text so it survives them being deleted
+  id        String   @id @default(cuid())
+  message   String   @db.Text
+  tone      String   @default("info") // "info" or "warning"
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  createdBy String? // their name when posted, kept as plain text so it survives them being deleted
 
   @@index([active, createdAt])
 }
@@ -400,4 +403,28 @@ model FeatureFlag {
   message       String?
   updatedAt     DateTime @updatedAt
   updatedByName String?
+}
+
+// An adviser asking for a policy held by someone else to be moved to them. A Super Admin approves (the policy
+// moves to the requester) or declines it. Added 2026-11-19; nothing else in the database changed.
+model TransferRequest {
+  id              String    @id @default(cuid())
+  renewal         Renewal   @relation(fields: [renewalId], references: [id], onDelete: Cascade)
+  renewalId       String
+  requestedBy     User      @relation("TransferRequester", fields: [requestedById], references: [id], onDelete: Cascade)
+  requestedById   String
+  reason          String?
+  // PENDING, APPROVED, DECLINED or CANCELLED (by the requester)
+  status          String    @default("PENDING")
+  // Who held the policy when it was asked for, for the record.
+  fromAdviserName String?
+  decidedBy       User?     @relation("TransferDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+  decidedById     String?
+  decidedAt       DateTime?
+  decisionNote    String?
+  createdAt       DateTime  @default(now())
+
+  @@index([status, createdAt])
+  @@index([renewalId, status])
+  @@index([requestedById, status])
 }

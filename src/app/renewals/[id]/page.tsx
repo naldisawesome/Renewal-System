@@ -12,6 +12,10 @@ import FollowUpCard from "./FollowUpCard";
 import { Feature } from "@/components/FeatureProvider";
 import { markStuck } from "@/lib/stuck";
 import ClientPolicies from "./ClientPolicies";
+import TransferCard from "./TransferCard";
+import TransferDecision from "@/app/admin/transfers/TransferDecision";
+import { isFeatureOn } from "@/lib/featureFlags";
+import { holdsSameClient } from "@/lib/transfers";
 import { premiumChange, pct } from "@/lib/outcomeRules";
 import { nzToday } from "@/lib/deadlines";
 import { daysUntil, dueTone, isOpenStatus } from "@/lib/deadlines";
@@ -47,7 +51,26 @@ export default async function RenewalDetailPage({ params }: { params: { id: stri
     (session.user.role === "UNDERWRITER" && renewal.assignedUnderwriterId === session.user.id);
   const isPSA = session.user.role === "POLICY_SERVICE_ASSOCIATE";
   const canChangeStatus = isAdmin || isOwner;
-  if (!isAdmin && !isOwner && !isPSA) redirect("/workspace");
+  // An adviser may open, view only, any policy of a client they already look after (either portfolio), and ask
+  // for it to be moved to them (see TransferCard). Everyone else who isn't on the policy goes back to their list.
+  const transfersOn = await isFeatureOn("transfers");
+  const isAdviser = session.user.role === "ADVISER";
+  const holdsClient = isAdviser && transfersOn && (isOwner || (await holdsSameClient(session.user.id, renewal.clientName)));
+  const viewOnly = isAdviser && !isOwner && holdsClient;
+  if (!isAdmin && !isOwner && !isPSA && !viewOnly) redirect("/workspace");
+  const myTransfers = viewOnly
+    ? await prisma.transferRequest.findMany({
+        where: { renewalId: renewal.id, requestedById: session.user.id, status: { in: ["PENDING", "DECLINED"] } },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        include: { decidedBy: { select: { name: true } } },
+      })
+    : [];
+  const myLatest = myTransfers[0];
+  // Admins see waiting requests for this policy right here, with the same Approve / Decline as Transfer requests.
+  const waitingHere = isAdmin && transfersOn
+    ? await prisma.transferRequest.findMany({ where: { renewalId: renewal.id, status: "PENDING" }, orderBy: { createdAt: "asc" }, include: { requestedBy: { select: { name: true } } } })
+    : [];
 
   // The same policy's previous renewal (same policy number and portfolio, an earlier date), for the year-on-year change.
   const hasDate = !!renewal.renewalDate && renewal.renewalDate.getTime() !== 0;
@@ -72,10 +95,10 @@ export default async function RenewalDetailPage({ params }: { params: { id: stri
     where: { id: { not: renewal.id }, clientName: { equals: renewal.clientName, mode: "insensitive" } },
     orderBy: [{ renewalDate: "asc" }],
     take: 8,
-    select: { id: true, policyNumber: true, insurer: true, renewalDate: true, status: true, assignedAdviserId: true, assignedUnderwriterId: true },
+    select: { id: true, policyNumber: true, insurer: true, renewalDate: true, status: true, assignedAdviserId: true, assignedUnderwriterId: true, assignedAdviser: { select: { name: true } } },
   });
   const canOpen = (o: { assignedAdviserId: string | null; assignedUnderwriterId: string | null }) =>
-    isAdmin || isPSA || o.assignedAdviserId === session.user.id || o.assignedUnderwriterId === session.user.id;
+    isAdmin || isPSA || holdsClient || o.assignedAdviserId === session.user.id || o.assignedUnderwriterId === session.user.id;
 
   const isStuck = (await markStuck([{ id: renewal.id }]))[0].stuck;
   const money = (n: number | null) => (n != null ? n.toLocaleString("en-NZ", { style: "currency", currency: "NZD" }) : "—");
@@ -111,6 +134,20 @@ export default async function RenewalDetailPage({ params }: { params: { id: stri
     ["Underwriter", renewal.assignedUnderwriter?.name || <span className="text-slate-500 dark:text-slate-400">Not assigned</span>],
   ];
 
+  const transferCard = viewOnly ? (
+              <TransferCard
+                renewalId={renewal.id}
+                heldBy={renewal.assignedAdviser?.name ?? null}
+                closed={isClosed}
+                pendingSince={myLatest?.status === "PENDING" ? myLatest.createdAt.toISOString() : null}
+                lastDeclined={
+                  myLatest?.status === "DECLINED"
+                    ? { at: (myLatest.decidedAt ?? myLatest.createdAt).toISOString(), by: myLatest.decidedBy?.name ?? null, note: myLatest.decisionNote }
+                    : null
+                }
+              />
+  ) : null;
+
   return (
       <main className="page" style={{ maxWidth: 1240 }}>
         <BackButton />
@@ -144,12 +181,15 @@ export default async function RenewalDetailPage({ params }: { params: { id: stri
 
         {/* One page, no tabs. Activity is the main column, since notes are what people come here for; status,
             follow-up and the policy details sit beside it. */}
+        {/* View only: on phones the transfer card comes before the notes so it's seen first. */}
+        {transferCard && <div className="mb-6 lg:hidden">{transferCard}</div>}
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
           <div className="min-w-0">
             <Feature name="notes">
               <div className="card p-5 sm:p-6">
                 <CommentThread
               renewalId={renewal.id}
+              readOnly={viewOnly}
               initialComments={renewal.comments.map((c) => ({
                 id: c.id,
                 body: c.body,
@@ -168,6 +208,17 @@ export default async function RenewalDetailPage({ params }: { params: { id: stri
           </div>
 
           <aside className="space-y-4">
+            {transferCard && <div className="hidden lg:block">{transferCard}</div>}
+            {waitingHere.map((t) => (
+              <div key={t.id} className="card border-brand-200 bg-brand-50/60 p-5 dark:border-brand-900/60 dark:bg-brand-950/30">
+                <h2 className="text-[0.875rem] font-semibold text-slate-900 dark:text-slate-100">Transfer requested</h2>
+                <p className="mt-1 text-[0.8125rem] text-slate-600 dark:text-slate-400">
+                  {t.requestedBy.name} asked for this policy to be moved to them
+                  {t.reason ? <>: &ldquo;{t.reason}&rdquo;</> : "."}
+                </p>
+                <TransferDecision id={t.id} requester={t.requestedBy.name} stacked />
+              </div>
+            ))}
             <div id="status-control" className="card p-5">
               {canChangeStatus ? (
                 <StatusControl
@@ -255,6 +306,7 @@ export default async function RenewalDetailPage({ params }: { params: { id: stri
                 status: o.status,
                 renewalDate: o.renewalDate ? o.renewalDate.toISOString() : null,
                 linked: canOpen(o),
+                heldBy: holdsClient ? (o.assignedAdviserId === session.user.id ? "You" : o.assignedAdviser?.name ?? "Not assigned") : null,
               }))}
             />
 

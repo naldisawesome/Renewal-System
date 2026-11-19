@@ -187,3 +187,12 @@ export const reassignSchema = z.object({
   /** A line for the person taking over; saved as a note on each renewal. */
   note: z.string().trim().max(500).optional(),
 });
+
+export const transferRequestSchema = z.object({
+  reason: z.string().trim().max(300, "Keep the reason under 300 characters").optional(),
+});
+
+export const transferDecisionSchema = z.object({
+  decision: z.enum(["APPROVE", "DECLINE"]),
+  note: z.string().trim().max(300).optional(),
+});

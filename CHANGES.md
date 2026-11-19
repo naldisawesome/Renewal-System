@@ -1,3 +1,26 @@
+# Update 2026-11-19: view other policies of a client and request a transfer
+
+- **Advisers can open a client's other policies, view only.** If an adviser looks after any policy for a client,
+  they can open that client's other policies (Cactus and Blanket) from "Other policies for this client", which now
+  also shows who holds each one. On those pages they can read everything but can't change status, details,
+  follow-ups or add notes (the server refuses these too, not just the screen).
+- **Request transfer.** A "View only" card on the page has **Request transfer** with an optional reason. While it's
+  waiting the adviser sees "Transfer requested … Waiting for an admin" and can cancel it; if it was declined they
+  see who declined it and why.
+- **Admins approve.** Super Admins get a notification, a "N transfer requests are waiting" line on Renewals, a new
+  **Settings → Transfer requests** page (waiting requests with Approve / Decline and an optional note, plus recently
+  decided ones), and an Approve / Decline card on the renewal page itself. Approving moves the policy to the
+  requester as adviser (Not assigned becomes Needs quote; status, notes and underwriter otherwise unchanged),
+  notifies the requester and the previous adviser, and closes any other waiting requests for that policy.
+  Requests to an adviser who is no longer active, or for finished policies, are refused.
+- Recorded in the renewal history and the Audit log (Transfer requested / approved / declined). New feature switch
+  "Transfer requests" (on by default). System health now also checks the transfer requests table.
+- **Database: one new table, `TransferRequest`** (approved by Reynald). Nothing existing was changed; Vercel's build
+  creates it automatically (`prisma db push`).
+- Tests: 187 (new `transfers.test.ts`: who may ask, duplicates, cancelling, approve/decline effects, admin only).
+
+---
+
 # Update 2026-11-19: simpler renewal page, no tabs
 
 - **Activity is the main column.** Notes, changes and the note box are on the page straight away; no more switching

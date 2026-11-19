@@ -29,10 +29,13 @@ export default function CommentThread({
   renewalId,
   initialComments,
   events = [],
+  readOnly = false,
 }: {
   renewalId: string;
   initialComments: CommentData[];
   events?: EventData[];
+  /** View-only visitors (an adviser looking at a client's policy held by someone else) read notes but can't add them. */
+  readOnly?: boolean;
 }) {
   const [comments, setComments] = useState(initialComments);
   // After a refresh the page passes the full list again (it may hold notes others added): keep ours in step with it.
@@ -151,6 +154,11 @@ export default function CommentThread({
         )}
       </div>
 
+      {readOnly ? (
+        <p className="rounded-xl border border-dashed border-slate-200 px-3 py-2.5 text-[0.8125rem] text-slate-500 dark:border-slate-800 dark:text-slate-400">
+          You're viewing this policy. Only the people working on it can add notes.
+        </p>
+      ) : (
       <form onSubmit={submit} className="rounded-xl border border-slate-200 bg-white p-2 focus-within:border-brand-500 dark:border-slate-800 dark:bg-slate-900">
         {error && <p className="alert-error mb-2" role="alert">{error}</p>}
         <MentionInput
@@ -169,6 +177,7 @@ export default function CommentThread({
           </button>
         </div>
       </form>
+      )}
     </section>
   );
 }

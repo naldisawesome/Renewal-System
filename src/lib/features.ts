@@ -18,6 +18,7 @@ export const FEATURES: FeatureDef[] = [
 
   { key: "notes", group: "Working a renewal", label: "Notes and mentions", description: "Writing notes on a renewal, quick notes and @mentions." },
   { key: "follow_ups", group: "Working a renewal", label: "Follow-up dates", description: "Setting the next follow-up date on a renewal." },
+  { key: "transfers", group: "Working a renewal", label: "Transfer requests", description: "Advisers viewing other policies of their clients and asking for one to be moved to them; admins approving." },
   { key: "notifications", group: "Working a renewal", label: "Notifications", description: "The bell and its list of mentions and reminders." },
 
   { key: "dashboard", group: "Insights", label: "Dashboards", description: "Insights for managers (forecast) and the adviser's My dashboard." },

@@ -79,6 +79,7 @@ export const config = {
     "/api/announcements/:path*",
     "/api/saved-views/:path*",
     "/api/notifications/:path*",
+    "/api/transfer-requests/:path*",
     "/api/account/:path*",
     "/api/problems",
     "/api/sign-in-methods",

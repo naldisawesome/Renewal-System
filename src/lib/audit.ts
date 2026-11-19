@@ -30,7 +30,10 @@ export type AuditAction =
   | "LOGIN_FAILED_RATE_LIMITED"
   | "LOGIN_FAILED_NOT_COMPANY"
   | "SIGN_IN_SETTINGS_CHANGED"
-  | "FEATURE_SWITCHED";
+  | "FEATURE_SWITCHED"
+  | "TRANSFER_REQUESTED"
+  | "TRANSFER_APPROVED"
+  | "TRANSFER_DECLINED";
 
 // The account-management actions above (role changes, suspensions, etc.)
 // vs. the login-attempt actions below - kept separate so the audit log page

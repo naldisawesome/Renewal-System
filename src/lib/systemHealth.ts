@@ -19,6 +19,7 @@ const TABLES: { label: string; read: () => Promise<unknown> }[] = [
   { label: "Upload changes (for Undo)", read: () => prisma.uploadChange.findFirst({ select: { id: true } }) },
   { label: "Audit log", read: () => prisma.auditLog.findFirst({ select: { id: true } }) },
   { label: "Announcements", read: () => prisma.announcement.findFirst({ select: { id: true } }) },
+  { label: "Transfer requests", read: () => prisma.transferRequest.findFirst({ select: { id: true } }) },
   { label: "Problems", read: () => prisma.problemEvent.findFirst({ select: { id: true } }) },
   { label: "Settings", read: () => prisma.appSetting.findFirst() },
   { label: "Feature switches", read: () => prisma.featureFlag.findFirst() },

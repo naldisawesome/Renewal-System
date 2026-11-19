@@ -19,10 +19,10 @@ describe("database health", () => {
     const { checks } = await runSystemHealthChecks();
     const db = checks.find((c) => c.id === "database")!;
     expect(db.status).toBe("fail");
-    expect(db.parts!.length).toBe(15);
-    expect(db.detail).toBe("1 of 15 parts not reachable");
+    expect(db.parts!.length).toBe(16);
+    expect(db.detail).toBe("1 of 16 parts not reachable");
     const notes = db.parts!.find((p) => p.label === "Notes")!;
     expect(notes).toMatchObject({ status: "fail", detail: "Table missing, the database may be out of date" });
-    expect(db.parts!.filter((p) => p.status === "ok").length).toBe(14);
+    expect(db.parts!.filter((p) => p.status === "ok").length).toBe(15);
   });
 });

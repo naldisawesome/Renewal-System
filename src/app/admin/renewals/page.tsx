@@ -9,6 +9,8 @@ import { adminRenewalsWhere } from "@/lib/renewalFilters";
 import { getMonthBreakdown } from "@/lib/monthBreakdown";
 import { DUE_WINDOWS, dueWhere } from "@/lib/deadlines";
 import RenewalsPageClient from "./RenewalsPageClient";
+import Link from "next/link";
+import { isFeatureOn } from "@/lib/featureFlags";
 
 export default async function AdminRenewalsPage({
   searchParams,
@@ -117,8 +119,24 @@ export default async function AdminRenewalsPage({
     redirect(`/admin/renewals${qs.toString() ? `?${qs}` : ""}`);
   }
 
+  // Transfer requests waiting for a decision get a one-line reminder at the top for Super Admins.
+  const waitingTransfers = canManage && (await isFeatureOn("transfers"))
+    ? await prisma.transferRequest.count({ where: { status: "PENDING" } }).catch(() => 0)
+    : 0;
+
   return (
     <main className="page">
+      {waitingTransfers > 0 && (
+        <Link
+          href="/admin/transfers"
+          className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-brand-200 bg-brand-50 px-4 py-2.5 text-[0.875rem] text-brand-800 hover:bg-brand-100 dark:border-brand-900/60 dark:bg-brand-950/40 dark:text-brand-200"
+        >
+          <span>
+            {waitingTransfers} transfer {waitingTransfers === 1 ? "request is" : "requests are"} waiting for you
+          </span>
+          <span className="font-medium">Review</span>
+        </Link>
+      )}
       <RenewalsPageClient
         renewals={(await markStuck(renewals)) as any}
         canManage={canManage}

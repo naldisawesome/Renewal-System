@@ -5,7 +5,7 @@ import { StatusBadge } from "@/components/Badges";
 export default function ClientPolicies({
   rows,
 }: {
-  rows: { id: string; policyNumber: string; status: string; renewalDate: string | null; linked: boolean }[];
+  rows: { id: string; policyNumber: string; status: string; renewalDate: string | null; linked: boolean; heldBy?: string | null }[];
 }) {
   if (rows.length === 0) return null;
   return (
@@ -20,7 +20,10 @@ export default function ClientPolicies({
             <>
               <span className="min-w-0">
                 <span className="block truncate text-slate-900 dark:text-slate-100">{o.policyNumber}</span>
-                <span className="block text-slate-500 dark:text-slate-400">{date}</span>
+                <span className="block text-slate-500 dark:text-slate-400">
+                  {date}
+                  {o.heldBy && <span> · {o.heldBy}</span>}
+                </span>
               </span>
               <StatusBadge status={o.status as any} />
             </>

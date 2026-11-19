@@ -20,7 +20,9 @@ NextAuth, Zod, Tailwind**, deployed on **Vercel**.
 - **Login / logout** with four roles (people sign in with their company Google account):
   - **Super Admin (manager)** — uploads files, approves new accounts, allocates renewals,
     sees everything across both books.
-  - **Adviser** — sees only the renewals assigned to them, updates status, adds notes.
+  - **Adviser** — sees only the renewals assigned to them, updates status, adds notes. They can also open,
+    **view only**, any other policy of a client they already look after (Cactus or Blanket) and ask for it to be
+    moved to them with **Request transfer**.
   - **Underwriter** — works the renewals assigned to them as underwriter and records the quote.
   - **Policy Service Associate** — read-only view of All renewals, can leave notes.
   Name and email come from the person's Google account and can't be edited in the app.
@@ -29,6 +31,13 @@ NextAuth, Zod, Tailwind**, deployed on **Vercel**.
 - **Allocation** — the file's original "Sales Team" column is kept and shown for reference only;
   a manager manually assigns every renewal to an adviser from a checklist-style table (bulk
   select + assign, or reassign later).
+- **Transfer requests** — when a client's policies are split between advisers, an adviser opens the other policy
+  from "Other policies for this client" (view only: they can read it but not change status, details, follow-ups or
+  notes) and clicks **Request transfer**, with an optional reason. Super Admins are notified, see a reminder on
+  Renewals, and decide on **Settings → Transfer requests** or on the renewal page itself. **Approve** moves the
+  policy to the adviser who asked (status, notes and the underwriter stay as they are; a Not assigned policy becomes
+  Needs quote) and tells both advisers; **Decline** leaves it where it is and tells the adviser, with the admin's note.
+  Everything is recorded in the renewal's history and the Audit log. Can be switched off under Feature switches.
 - **Comments** — a running notes thread on every renewal, visible to the assigned adviser and all
   managers.
 - **Database-backed** — everything is stored in Postgres via Prisma, so nothing lives only in a
@@ -265,12 +274,15 @@ terminal instead of a browser.
 2. **Users** — approve anyone who has signed in and is waiting on you.
 3. **Renewals** — filter, select renewals, choose who in "Assign to…" (or share them evenly) and click Assign.
 4. **Board** and **Insights** — the pipeline at a glance, and the forecast and reports.
+5. **Transfer requests** (Settings) — approve or decline advisers' requests to take over a client's policy.
 
 **As an adviser:**
 1. Register at `/register`, wait for approval.
 2. Once approved, **My Renewals** shows everything assigned to you, filterable by status.
 3. Open a renewal to update its status (Needs quote → Quoted → Contacted → Renewed/Cancelled/Lapsed)
    and leave notes for the manager or your future self.
+4. If the same client has a policy with someone else, open it from "Other policies for this client" and use
+   **Request transfer**. You'll get a notification when an admin approves or declines it.
 
 ---
 

@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 import { HomeIcon, ChartIcon, ListIcon, ShuffleIcon, UploadIcon, UsersIcon, ClipboardIcon,
-  SettingsIcon, FolderIcon, MessageIcon, ShieldIcon, RefreshIcon } from "./icons";
+  SettingsIcon, FolderIcon, MessageIcon, ShieldIcon, RefreshIcon, ShuffleIcon as TransferIcon } from "./icons";
 
 /*
  * What each role can reach. The app frame (AppShell) shows these in the top bar on desktop and in a menu sheet
@@ -37,6 +37,7 @@ export function navFor(role: Role, showExtras = false, owner = false): NavItem[]
       { href: "/admin/board", label: "Board", icon: ClipboardIcon, features: ["board"] },
       { href: "/admin/upload", label: "Upload", icon: UploadIcon, features: ["upload"] },
       { href: "/admin/dashboard", label: "Insights", icon: ChartIcon, features: ["dashboard", "reports"], alsoActive: ["/admin/reports", "/admin"] , exactAlso: true },
+      { href: "/admin/transfers", label: "Transfer requests", icon: TransferIcon, section: "Settings", features: ["transfers"] },
       { href: "/admin/users", label: "Users", icon: UsersIcon, section: "Settings" },
       { href: "/admin/announcements", label: "Announcements", icon: MessageIcon, section: "Settings", features: ["announcements"] },
       { href: "/admin/audit-log", label: "Audit log", icon: ShieldIcon, section: "Settings", features: ["audit_log"] },
