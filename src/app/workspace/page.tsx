@@ -11,6 +11,11 @@ import MyDay from "./MyDay";
 import MyRenewalsTable from "./MyRenewalsTable";
 import WorkspaceHeader from "./WorkspaceHeader";
 import { resolveWidgets } from "@/lib/widgets";
+import { getMonthBreakdown } from "@/lib/monthBreakdown";
+import WorkspaceFilters from "./WorkspaceFilters";
+import WorkspacePager from "./WorkspacePager";
+
+const PAGE_SIZE = 50;
 
 const CLOSED = ["RENEWED", "CANCELLED", "LAPSED"];
 
@@ -24,13 +29,20 @@ export default async function AdviserPage({
   const isUnderwriter = session.user.role === "UNDERWRITER";
 
   const ownWhere: Prisma.RenewalWhereInput = ownScope(session.user);
+  const listWhere = mineWhere(session.user, searchParams);
+  const page = Math.max(1, Math.floor(Number(searchParams.page)) || 1);
 
-  const [renewals, statusCounts, deadlines, followUpsDue, me, stuckCount] = await Promise.all([
+  const [renewals, listTotal, months, statusCounts, deadlines, followUpsDue, me, stuckCount] = await Promise.all([
+    // 50 at a time; the pager below the list moves through the rest.
     prisma.renewal.findMany({
-      where: mineWhere(session.user, searchParams),
-      orderBy: { renewalDate: "asc" },
+      where: listWhere,
+      orderBy: [{ renewalDate: "asc" }, { id: "asc" }],
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
       include: { _count: { select: { comments: true } } },
     }),
+    prisma.renewal.count({ where: listWhere }),
+    getMonthBreakdown(ownWhere),
     // Counts for the filter tabs and summary tiles - always across everything
     // assigned to this person, not just the currently filtered list.
     prisma.renewal.groupBy({ by: ["status"], where: ownWhere, _count: { _all: true } }),
@@ -89,12 +101,15 @@ export default async function AdviserPage({
         activeFollowUp={followup === "due"}
         widgets={widgets}
         activeMonth={/^\d{4}-\d{2}$/.test(searchParams.month ?? "") ? searchParams.month! : ""}
+        extraParams={{ q: searchParams.q ?? "", company: searchParams.company ?? "", bookType: searchParams.bookType ?? "" }}
         showExtras={!!me?.showExtras}
       />
 
       {await isFeatureOn("my_day") && <MyDay toQuote={isUnderwriter ? countOf("ASSIGNED") + countOf("IN_PROGRESS") : 0} overdue={deadlines.counts.overdue} followUps={followUpsDue} stuck={stuckCount} active={status === "NEEDS_QUOTE" ? "quote" : due === "overdue" ? "overdue" : due === "stuck" ? "stuck" : followup === "due" ? "followup" : ""} />}
 
+      <WorkspaceFilters months={months.map((m) => ({ key: m.key, label: m.label, count: m.count }))} />
       <MyRenewalsTable renewals={(await markStuck(rows)) as any} />
+      <WorkspacePager page={page} pageSize={PAGE_SIZE} total={listTotal} params={searchParams} />
     </main>
   );
 }

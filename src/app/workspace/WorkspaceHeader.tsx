@@ -47,12 +47,14 @@ export default function WorkspaceHeader({
   widgets,
   activeMonth,
   showExtras,
-}: WorkspaceHeaderProps) {
-  const exportParams = new URLSearchParams({ scope: "mine", ...(activeStatus ? { status: activeStatus } : {}), ...(activeDue ? { due: activeDue } : {}), ...(activeFollowUp ? { followup: "due" } : {}), ...(activeMonth ? { month: activeMonth } : {}) });
+  extraParams = {},
+}: WorkspaceHeaderProps & { extraParams?: Record<string, string> }) {
+  const extra = Object.fromEntries(Object.entries(extraParams).filter(([, v]) => v));
+  const exportParams = new URLSearchParams({ scope: "mine", ...extra, ...(activeStatus ? { status: activeStatus } : {}), ...(activeDue ? { due: activeDue } : {}), ...(activeFollowUp ? { followup: "due" } : {}), ...(activeMonth ? { month: activeMonth } : {}) });
   const thisMonth = nzToday().toISOString().slice(0, 7);
   const nextMonth = (() => { const t = nzToday(); return new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 1)).toISOString().slice(0, 7); })();
   const hrefWith = (over: Record<string, string>) => {
-    const q = new URLSearchParams({ ...(activeStatus ? { status: activeStatus } : {}), ...(activeDue ? { due: activeDue } : {}), ...(activeFollowUp ? { followup: "due" } : {}), ...(activeMonth ? { month: activeMonth } : {}), ...over });
+    const q = new URLSearchParams({ ...extra, ...(activeStatus ? { status: activeStatus } : {}), ...(activeDue ? { due: activeDue } : {}), ...(activeFollowUp ? { followup: "due" } : {}), ...(activeMonth ? { month: activeMonth } : {}), ...over });
     for (const [k, v] of Array.from(q.entries())) if (!v) q.delete(k);
     const t = q.toString();
     return t ? `/workspace?${t}` : "/workspace";

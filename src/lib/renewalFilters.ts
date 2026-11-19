@@ -63,12 +63,28 @@ export function ownWhere(user: { id: string; role: string }): Prisma.RenewalWher
   return user.role === "UNDERWRITER" ? { assignedUnderwriterId: user.id } : { assignedAdviserId: user.id };
 }
 
-/** My renewals, with its status tab and deadline filter. */
+/** My renewals, with its status tab, deadline filter, search, portfolio, book and month. */
 export function mineWhere(user: { id: string; role: string }, p: Params, today = nzToday()): Prisma.RenewalWhereInput {
   const and = [dueWhere(p.due, today), followUpWhere(p.followup, today)].filter(Boolean) as Prisma.RenewalWhereInput[];
   if (isMonthKey(p.month)) {
     const r = monthKeyToRange(p.month);
     and.push({ renewalDate: { gte: r.start, lt: r.end } });
   }
-  return { ...ownWhere(user), ...statusWhere(p.status), ...(and.length ? { AND: and } : {}) };
+  const term = p.q ? cleanSearch(p.q) : "";
+  if (term) {
+    and.push({
+      OR: [
+        { clientName: { contains: term, mode: "insensitive" } },
+        { policyNumber: { contains: term, mode: "insensitive" } },
+        { insurer: { contains: term, mode: "insensitive" } },
+      ],
+    });
+  }
+  return {
+    ...ownWhere(user),
+    ...statusWhere(p.status),
+    ...(p.company === "CACTUS" || p.company === "BLANKET" ? { company: p.company as any } : {}),
+    ...(p.bookType === "RENEWALS" || p.bookType === "CONTRACT_WORKS" ? { bookType: p.bookType as any } : {}),
+    ...(and.length ? { AND: and } : {}),
+  };
 }

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { StatusBadge, CompanyBadge, BookTypeBadge } from "@/components/Badges";
-import { monthYearLabel } from "@/lib/dates";
 import NotesButton from "@/components/NotesButton";
 import RenewalCards from "@/components/RenewalCards";
 import { daysUntil, dueWindow, dueChip, dueTone } from "@/lib/deadlines";
@@ -40,18 +39,17 @@ export default function MyRenewalsTable({ renewals, who }: { renewals: RenewalRo
     <>
     <RenewalCards plainFor={who} rows={renewals} empty="Nothing here. Renewals assigned to you will appear in this list." />
     <div className="tbl-wrap hidden md:block">
-      <table className="tbl min-w-[58rem]">
+      <table className="tbl">
         <thead>
           <tr>
             <th>Client</th>
             <th>Policy</th>
-            <th>Insurer</th>
+            <th className="hidden xl:table-cell">Insurer</th>
             <th>Portfolio</th>
             <th>Renewal date</th>
-            <th>Month</th>
             <th className="text-right">Invoice total</th>
             <th>Status</th>
-            <th>Follow-up</th>
+            <th className="hidden lg:table-cell">Follow-up</th>
             <th className="no-print w-14">Notes</th>
           </tr>
         </thead>
@@ -65,7 +63,7 @@ export default function MyRenewalsTable({ renewals, who }: { renewals: RenewalRo
                   <Link
                     href={`/renewals/${r.id}`}
                     title={r.clientName}
-                    className="block max-w-[16rem] truncate font-medium text-slate-900 decoration-slate-300 underline-offset-4 hover:underline dark:text-slate-100"
+                    className="block max-w-[11rem] truncate font-medium lg:max-w-[15rem] text-slate-900 decoration-slate-300 underline-offset-4 hover:underline dark:text-slate-100"
                   >
                     {r.clientName}
                   </Link>
@@ -75,8 +73,8 @@ export default function MyRenewalsTable({ renewals, who }: { renewals: RenewalRo
                     {r.policyNumber}
                   </span>
                 </td>
-                <td>
-                  <span className="block max-w-[10rem] truncate" title={r.insurer || ""}>
+                <td className="hidden xl:table-cell">
+                  <span className="block max-w-[11rem] truncate" title={r.insurer || ""}>
                     {r.insurer || <span className={muted}>—</span>}
                   </span>
                 </td>
@@ -87,18 +85,24 @@ export default function MyRenewalsTable({ renewals, who }: { renewals: RenewalRo
                   </div>
                 </td>
                 <td className="whitespace-nowrap">
-                  {r.renewalDate && days != null ? new Date(r.renewalDate).toLocaleDateString("en-NZ", { timeZone: "UTC" }) : <span className={muted}>—</span>}
-                  {soon && <span className={`ml-2 text-[0.75rem] ${dueTone(days!)}`}>{dueChip(days!)}</span>}
-                  {r.stuck && <span title="Open and due soon, but nothing has happened for a week" className="ml-2 rounded-full bg-[#f6e7d3] px-1.5 py-px text-[0.6875rem] font-medium text-[#8a4f12] dark:bg-[#3a2a14] dark:text-[#e8b97c]">Stuck</span>}
+                  {/* Date on top; how soon it's due (and Stuck) underneath, so the column stays narrow. */}
+                  <span className="block">
+                    {r.renewalDate && days != null ? new Date(r.renewalDate).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : <span className={muted}>—</span>}
+                  </span>
+                  {(soon || r.stuck) && (
+                    <span className="mt-0.5 flex items-center gap-1.5">
+                      {soon && <span className={`text-[0.75rem] ${dueTone(days!)}`}>{dueChip(days!)}</span>}
+                      {r.stuck && <span title="Open and due soon, but nothing has happened for a week" className="rounded-full bg-[#f6e7d3] px-1.5 py-px text-[0.6875rem] font-medium text-[#8a4f12] dark:bg-[#3a2a14] dark:text-[#e8b97c]">Stuck</span>}
+                    </span>
+                  )}
                 </td>
-                <td className="whitespace-nowrap text-slate-500 dark:text-slate-400">{monthYearLabel(r.renewalDate)}</td>
                 <td className="whitespace-nowrap text-right">
                   {r.invoiceTotal != null ? r.invoiceTotal.toLocaleString("en-NZ", { style: "currency", currency: "NZD" }) : <span className={muted}>—</span>}
                 </td>
                 <td className="whitespace-nowrap">
                   <StatusBadge status={r.status} plainFor={who} />
                 </td>
-                <td className="whitespace-nowrap">
+                <td className="hidden whitespace-nowrap lg:table-cell">
                   <FollowUpChip date={r.followUpAt} note={r.followUpNote} closed={!dueWindow(r.renewalDate, r.status) && ["RENEWED", "CANCELLED", "LAPSED"].includes(r.status)} />
                 </td>
                 <td className="no-print whitespace-nowrap">
@@ -109,7 +113,7 @@ export default function MyRenewalsTable({ renewals, who }: { renewals: RenewalRo
           })}
           {renewals.length === 0 && (
             <tr>
-              <td colSpan={10} className="!py-16 text-center text-slate-500">
+              <td colSpan={9} className="!py-16 text-center text-slate-500">
                 Nothing here. Renewals assigned to you will appear in this list.
               </td>
             </tr>

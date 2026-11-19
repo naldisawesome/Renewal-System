@@ -1,3 +1,19 @@
+# Update 2026-11-19: My renewals shows 50 at a time, with filters, and fits the screen
+
+- **50 per page.** My renewals now lists 50 renewals at a time, soonest first, with "Showing 1–50 of 444" and
+  Previous / page numbers / Next under the list. Export to Excel still exports everything that matches the filters.
+- **Filters** above the list: search (client, policy number or insurer; a pasted "Policy" label is ignored),
+  portfolio (Cactus / Blanket), book (Renewals / Contract works) and renewal month (with how many in each).
+  "Clear filters" appears when any are set. They work together with the status tabs, the deadline band and
+  "follow-ups due", and every change goes back to page 1.
+- **No more sideways scrolling.** The Month column is gone (the renewal date already shows it), "5d overdue" and
+  "Stuck" now sit under the date instead of beside it, and long client and insurer names are shortened (the full
+  name shows on hover). On narrower screens Insurer (under 1280px) and Follow-up (under 1024px) are hidden; phones
+  keep the card view.
+- No database changes. Tests: 191 (new `workspaceFilters.test.ts`).
+
+---
+
 # Update 2026-11-19: view other policies of a client and request a transfer
 
 - **Advisers can open a client's other policies, view only.** If an adviser looks after any policy for a client,
