@@ -1,3 +1,24 @@
+# Update 2026-11-20: Report a bug or request a change, sent to the project management system
+
+- **New bug icon in the top bar** for everyone. It opens a form with two choices, "Something's wrong" and "I'd like
+  a change", then a short title, what happened (or what they'd like), optional "what did you expect" and "steps to
+  make it happen again" for bugs, and how urgent it is (Low / Medium / High).
+- **Filed straight into Not-Jira-System** in the RNL project through its REST API (`POST /api/v1/tasks`). Bugs
+  become Bug tasks with severity and the expected / actual / steps / environment fields filled; requests become
+  Feature tasks. Priority follows the urgency. The task description includes who sent it, the page, the NZ time and
+  the browser. The person sees the task number (e.g. RNL-142).
+- **Nothing gets lost:** if the tracker can't be reached or the connection isn't set up, the report is saved in
+  Problems (Settings → System health) with everything they wrote, and the person is told it was kept for the admin.
+- **System health** has a new check, "Bug reports to project management": not set up / sending to RNL / the reason
+  it fails.
+- New Vercel settings: `PM_URL`, `PM_API_TOKEN`, optional `PM_PROJECT_KEY` (defaults to RNL). New feature switch
+  "Report a bug or request a change" (on by default). 10 reports per person per hour.
+- Fix: the transfer cards and the selected urgency option used a colour shade that doesn't exist in the palette, so
+  they showed light in dark mode. They now use the dark brand shade.
+- No database changes. Tests: 198 (new `feedback.test.ts`).
+
+---
+
 # Fix 2026-11-19: My renewals search works as you type
 
 The search box on My renewals now updates the list a moment after you stop typing (or straight away on Enter),

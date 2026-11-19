@@ -28,6 +28,7 @@ export const FEATURES: FeatureDef[] = [
   { key: "announcements", group: "Admin", label: "Announcements", description: "Writing announcements, and the banner everyone sees." },
   { key: "system_health", group: "Admin", label: "System health", description: "The System page with its checks and problem reports." },
   { key: "backup", group: "Admin", label: "Backup download", description: "Downloading a full backup to Excel." },
+  { key: "feedback", group: "Admin", label: "Report a bug or request a change", description: "The button in the top bar that sends bug reports and requests to the project management system." },
   { key: "ai_agent", group: "Admin", label: "AI agent connection", description: "Sending events to the company AI agent and letting it look renewals up." },
 
   { key: "renewals", group: "Core (always on)", locked: true, label: "Renewals and renewal pages", description: "The lists, a renewal's details, status changes and outcomes." },

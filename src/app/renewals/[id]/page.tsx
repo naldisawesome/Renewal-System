@@ -210,7 +210,7 @@ export default async function RenewalDetailPage({ params }: { params: { id: stri
           <aside className="space-y-4">
             {transferCard && <div className="hidden lg:block">{transferCard}</div>}
             {waitingHere.map((t) => (
-              <div key={t.id} className="card border-brand-200 bg-brand-50/60 p-5 dark:border-brand-900/60 dark:bg-brand-950/30">
+              <div key={t.id} className="card border-brand-200 bg-brand-50/60 p-5 dark:border-brand-900/60 dark:bg-brand-900/40">
                 <h2 className="text-[0.875rem] font-semibold text-slate-900 dark:text-slate-100">Transfer requested</h2>
                 <p className="mt-1 text-[0.8125rem] text-slate-600 dark:text-slate-400">
                   {t.requestedBy.name} asked for this policy to be moved to them

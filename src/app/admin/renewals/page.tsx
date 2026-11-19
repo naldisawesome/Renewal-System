@@ -129,7 +129,7 @@ export default async function AdminRenewalsPage({
       {waitingTransfers > 0 && (
         <Link
           href="/admin/transfers"
-          className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-brand-200 bg-brand-50 px-4 py-2.5 text-[0.875rem] text-brand-800 hover:bg-brand-100 dark:border-brand-900/60 dark:bg-brand-950/40 dark:text-brand-200"
+          className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-brand-200 bg-brand-50 px-4 py-2.5 text-[0.875rem] text-brand-800 hover:bg-brand-100 dark:border-brand-900/60 dark:bg-brand-900/50 dark:text-brand-200"
         >
           <span>
             {waitingTransfers} transfer {waitingTransfers === 1 ? "request is" : "requests are"} waiting for you

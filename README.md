@@ -133,6 +133,17 @@ and are shown and treated exactly as Needs quote (no data was migrated).
   status changes, notes, follow-ups) and the agent can look renewals up read-only. Off until set up in Vercel with
   `AI_AGENT_WEBHOOK_URL`, `AI_AGENT_SECRET` (optional), `AI_AGENT_EVENTS` (optional) and `AI_AGENT_API_KEY`. The
   page has the setup details for IT and a test button. Code: `src/lib/agent.ts`, `src/app/api/agent/`.
+- **Report a bug or request a change.** The bug icon in the top bar (everyone) opens a short form: something's
+  wrong or I'd like a change, a title, what happened, optional expected result and steps, and how urgent it is. It's
+  filed straight into the project management system (Not-Jira-System) as a task in the **RNL** project: bugs as Bug
+  type with severity (Low → minor, Medium → major, High → blocker), requests as Feature, priority from the urgency.
+  The task includes who sent it (name, email, role), the page they were on, the time (NZ) and their browser, and the
+  person sees the task number (e.g. RNL-142). Set up in Vercel with `PM_URL` (the project management system's
+  address), `PM_API_TOKEN` (an API token made under Account settings there; tasks are created as that token's
+  owner) and optionally `PM_PROJECT_KEY` (defaults to `RNL`). If it can't be sent, the report is kept under
+  Settings → System health → Problems so nothing is lost. System health shows whether the connection works. Limited
+  to 10 reports per person per hour. Feature switch: "Report a bug or request a change". Code:
+  `src/lib/projectManagement.ts`, `src/app/api/feedback/route.ts`, `src/components/FeedbackButton.tsx`.
 - **Feature switches (owner only).** Every switchable feature with an on/off switch and an optional message. Off
   means hidden for everyone except the owner; pages show a "switched off for now" page and the matching APIs
   answer 503. Changes reach everyone within about 5 seconds. Every change is in the Audit log.

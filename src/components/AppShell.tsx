@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { navFor, isActive, type NavItem, type Role } from "./Sidebar";
 import NotificationBell from "./NotificationBell";
+import FeedbackButton from "./FeedbackButton";
 import UserMenu from "./UserMenu";
 import CommandSearch from "./CommandSearch";
 import { MenuIcon, CloseIcon } from "./icons";
@@ -118,6 +119,7 @@ export default function AppShell({
   }
   const home = items[0]?.href ?? "/";
   const showBell = owner || !off.includes("notifications");
+  const feedbackOn = owner || !off.includes("feedback");
 
   useEffect(() => setOpen(false), [pathname]);
   useEffect(() => {
@@ -169,6 +171,7 @@ export default function AppShell({
             <span className="md:hidden">
               <CommandSearch pages={items} variant="bar" />
             </span>
+            {feedbackOn && <FeedbackButton />}
             {showBell && <NotificationBell />}
             <UserMenu name={name} email={email} role={role} />
           </div>

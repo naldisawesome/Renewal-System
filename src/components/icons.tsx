@@ -96,6 +96,14 @@ export const FolderIcon = (p: P) => (
     <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
   </Icon>
 );
+export const BugIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M8 2l1.9 1.9M16 2l-1.9 1.9" />
+    <path d="M9 7.1V6a3 3 0 0 1 6 0v1.1" />
+    <path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6z" />
+    <path d="M12 20v-9M6.5 13H3M21 13h-3.5M6 9.5 3.5 8M18 9.5 20.5 8M6 17l-2.5 1.5M18 17l2.5 1.5" />
+  </Icon>
+);
 export const BellIcon = (p: P) => (
   <Icon {...p}>
     <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />

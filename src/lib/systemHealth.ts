@@ -1,3 +1,4 @@
+import { pmConfig, pmProject } from "@/lib/projectManagement";
 import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
 import { appUrl, emailConfigured, emailKindEnabled, isStaging, type EmailKind } from "@/lib/email";
@@ -124,6 +125,21 @@ export async function runSystemHealthChecks(): Promise<{ checks: HealthCheck[]; 
     checks.push({ id: "xlsx", label: "Excel upload and export", status: back.SheetNames.length ? "ok" : "fail", detail: "Reads and writes workbooks" });
   } catch {
     checks.push({ id: "xlsx", label: "Excel upload and export", status: "fail", detail: "The Excel library failed to load" });
+  }
+
+  // Bug reports and requests: whether the project management connection is set up and can see its project.
+  {
+    const pm = pmConfig();
+    if (!pm.configured) {
+      checks.push({ id: "pm", label: "Bug reports to project management", status: "warn", detail: "Not set up yet - PM_URL and PM_API_TOKEN" });
+    } else {
+      try {
+        const p = await pmProject();
+        checks.push({ id: "pm", label: "Bug reports to project management", status: "ok", detail: `Sending to ${p.key}` });
+      } catch (e: any) {
+        checks.push({ id: "pm", label: "Bug reports to project management", status: "fail", detail: e?.message || "Could not reach it" });
+      }
+    }
   }
 
   // Email: which kinds would actually go out right now, not just whether Resend is configured.
