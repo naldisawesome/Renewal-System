@@ -4,6 +4,7 @@ import { agentAuthorized } from "@/lib/agent";
 import { AGENT_RENEWAL_INCLUDE, agentRenewal } from "@/lib/agentRenewal";
 import { dueWhere } from "@/lib/deadlines";
 import { featureOff } from "@/lib/featureFlags";
+import { cleanSearch } from "@/lib/cleanSearch";
 
 /**
  * For the AI agent (read-only). Authorization: Bearer <AI_AGENT_API_KEY>.
@@ -18,7 +19,7 @@ export async function GET(req: Request) {
   const off = await featureOff("ai_agent");
   if (off) return off;
   const p = new URL(req.url).searchParams;
-  const q = (p.get("q") || "").trim().slice(0, 80);
+  const q = cleanSearch(p.get("q") || "");
   const statuses = (p.get("status") || "").split(",").map((s) => s.trim().toUpperCase()).filter(Boolean);
   const due = p.get("due") || "";
   const limit = Math.min(200, Math.max(1, Number(p.get("limit")) || 50));

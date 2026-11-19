@@ -1,3 +1,4 @@
+import { cleanSearch } from "./cleanSearch";
 import type { Prisma } from "@prisma/client";
 import { isMonthKey, monthKeyToRange } from "@/lib/dates";
 import { dueWhere, nzToday } from "@/lib/deadlines";
@@ -36,12 +37,13 @@ export function adminRenewalsWhere(p: Params, today = nzToday()): Prisma.Renewal
     const r = monthKeyToRange(month);
     and.push({ renewalDate: { gte: r.start, lt: r.end } });
   }
-  if (q) {
+  const term = q ? cleanSearch(q) : "";
+  if (term) {
     and.push({
       OR: [
-        { clientName: { contains: q, mode: "insensitive" } },
-        { policyNumber: { contains: q, mode: "insensitive" } },
-        { insurer: { contains: q, mode: "insensitive" } },
+        { clientName: { contains: term, mode: "insensitive" } },
+        { policyNumber: { contains: term, mode: "insensitive" } },
+        { insurer: { contains: term, mode: "insensitive" } },
       ],
     });
   }

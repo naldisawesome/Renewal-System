@@ -1,3 +1,13 @@
+# Fix 2026-11-19: copying a policy number no longer adds "Policy"
+
+- Copying the policy number from a renewal page no longer brings a hidden "Policy" label with it.
+- The search boxes (Find a renewal, the Renewals list search and the agent's search) now ignore a leading
+  "Policy", "Policy number" or "Policy no." in front of a policy number, so pasting "PolicyP000799996SVU" or
+  "Policy number: DPK5737596" still finds it. Client names that start with "Policy" are left alone.
+- No database changes. Tests: 172.
+
+---
+
 # Update 2026-11-19: policy number stands out on the renewal page
 
 The policy number under the client's name is now larger and bold, with the insurer beside it. No database changes.

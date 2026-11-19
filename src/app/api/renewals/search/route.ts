@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ownWhere } from "@/lib/renewalFilters";
+import { cleanSearch } from "@/lib/cleanSearch";
 
 /**
  * Quick search for the command box (Ctrl+K): the few renewals that best match a client name or policy number.
@@ -11,7 +12,7 @@ import { ownWhere } from "@/lib/renewalFilters";
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
-  const q = (new URL(req.url).searchParams.get("q") ?? "").trim().slice(0, 80);
+  const q = cleanSearch(new URL(req.url).searchParams.get("q") ?? "");
   if (q.length < 2) return NextResponse.json({ results: [] });
   const everything = session.user.role === "SUPER_ADMIN" || session.user.role === "POLICY_SERVICE_ASSOCIATE";
   const rows = await prisma.renewal.findMany({
