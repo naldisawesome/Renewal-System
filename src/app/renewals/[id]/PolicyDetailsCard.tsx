@@ -89,10 +89,13 @@ export default function PolicyDetailsCard({
   renewal,
   canEdit,
   isAdmin,
+  compact = false,
 }: {
   renewal: RenewalFull;
   canEdit: boolean;
   isAdmin: boolean;
+  /** Narrow column: one field per line, no sub-heading. */
+  compact?: boolean;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -147,12 +150,12 @@ export default function PolicyDetailsCard({
 
   const view = (title: string, id: string, fields: Field[]) => (
     <div>
-      <h3 id={id} className="mb-2 text-[0.8125rem] font-medium text-slate-700 dark:text-slate-300">{title}</h3>
-      <dl aria-labelledby={id} className="grid grid-cols-1 border-t border-slate-200 text-[0.875rem] dark:border-slate-800 sm:grid-cols-2 sm:gap-x-8">
+      <h3 id={id} className={compact ? "sr-only" : "mb-2 text-[0.8125rem] font-medium text-slate-700 dark:text-slate-300"}>{title}</h3>
+      <dl aria-labelledby={id} className={`grid grid-cols-1 border-t border-slate-200 text-[0.875rem] dark:border-slate-800 ${compact ? "" : "sm:grid-cols-2 sm:gap-x-8"}`}>
         {fields.map((f) => {
           const v = display(f, renewal[f.key]);
           return (
-            <div key={f.key} className={`flex justify-between gap-4 border-b border-slate-100 py-2.5 dark:border-slate-800/70 ${f.wide ? "sm:col-span-2" : ""}`}>
+            <div key={f.key} className={`flex justify-between gap-4 border-b border-slate-100 dark:border-slate-800/70 ${compact ? "py-2" : "py-2.5"} ${f.wide && !compact ? "sm:col-span-2" : ""}`}>
               <dt className="shrink-0 text-slate-500">
                 {f.label}
                 {manual.has(f.key) && (
@@ -173,10 +176,10 @@ export default function PolicyDetailsCard({
 
   if (!editing) {
     return (
-      <section aria-labelledby="policy-h" className="space-y-6">
+      <section aria-labelledby="policy-h" className={compact ? "space-y-3" : "space-y-6"}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 id="policy-h" className="section-title">Policy and client details</h2>
+            <h2 id="policy-h" className={compact ? "text-[0.9375rem] font-semibold text-slate-900 dark:text-slate-50" : "section-title"}>{compact ? "Details" : "Policy and client details"}</h2>
             {canEdit && missing.length > 0 && (
               <p className="mt-1 text-[0.8125rem] text-slate-500">
                 {missing.length} {missing.length === 1 ? "detail is" : "details are"} blank. Fill in what the upload didn&apos;t include.
@@ -184,8 +187,8 @@ export default function PolicyDetailsCard({
             )}
           </div>
           {canEdit && (
-            <button onClick={open} className="btn-secondary min-h-[36px] px-3 py-1.5 text-[0.8125rem]">
-              Edit details
+            <button onClick={open} className={compact ? "text-[0.8125rem] font-medium text-brand-700 underline-offset-4 hover:underline dark:text-brand-300" : "btn-secondary min-h-[36px] px-3 py-1.5 text-[0.8125rem]"}>
+              {compact ? "Edit" : "Edit details"}
             </button>
           )}
         </div>

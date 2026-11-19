@@ -111,7 +111,8 @@ and are shown and treated exactly as Needs quote (no data was migrated).
   Renewal month, Portfolio, Type, Adviser, Underwriter and Sales team. The list opens with the filters you used
   last. Select rows for the actions bar: Assign (one person, remove, or share evenly), hand-over note, Set
   follow-up, Delete. "Move someone's renewals" moves a whole list between people.
-- **Renewal page.** The latest note and the status box, key facts, then Activity and Policy details as tabs. Follow-up and the client's other policies are on the right.
+- **Renewal page.** Key facts under the client name; Activity (notes and changes) as the main column; status, follow-up,
+  policy details and the client's other policies on the right. No tabs. Follow-up and the client's other policies are on the right.
 - **Upload.** Uploads only add what is missing; nothing already in the system is changed or removed (details,
   status, allocation, notes). Choose "New renewals and contract works" or "New contract works only". Every upload
   is previewed before saving and the latest one can be undone. The heading row can be anywhere in the first 15

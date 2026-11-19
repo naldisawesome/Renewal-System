@@ -99,8 +99,9 @@ export default function CommentThread({
   return (
     <section aria-labelledby="notes-h">
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
-        <h2 id="notes-h" className="sr-only">Activity</h2>
-        <span className="text-[0.8125rem] text-slate-500">{feed.length} {feed.length === 1 ? "entry" : "entries"}, oldest first</span>
+        <h2 id="notes-h" className="section-title">
+          Activity <span className="font-normal text-slate-500">{feed.length}</span>
+        </h2>
         <div role="group" aria-label="Filter activity" className="flex gap-4 text-[0.8125rem]">
           {FILTERS.map((f) => (
             <button

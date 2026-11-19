@@ -9,13 +9,12 @@ import PolicyDetailsCard from "./PolicyDetailsCard";
 import DeleteRenewalButton from "./DeleteRenewalButton";
 import OutcomeCard from "./OutcomeCard";
 import FollowUpCard from "./FollowUpCard";
-import DetailTabs from "./DetailTabs";
 import { Feature } from "@/components/FeatureProvider";
 import { markStuck } from "@/lib/stuck";
 import ClientPolicies from "./ClientPolicies";
 import { premiumChange, pct } from "@/lib/outcomeRules";
 import { nzToday } from "@/lib/deadlines";
-import { daysUntil, dueTone, riskReason, isOpenStatus } from "@/lib/deadlines";
+import { daysUntil, dueTone, isOpenStatus } from "@/lib/deadlines";
 
 export default async function RenewalDetailPage({ params }: { params: { id: string } }) {
   const session = await requireSession();
@@ -81,12 +80,11 @@ export default async function RenewalDetailPage({ params }: { params: { id: stri
   const isStuck = (await markStuck([{ id: renewal.id }]))[0].stuck;
   const money = (n: number | null) => (n != null ? n.toLocaleString("en-NZ", { style: "currency", currency: "NZD" }) : "—");
   const days = daysUntil(renewal.renewalDate);
-  const risk = riskReason(renewal.renewalDate, renewal.status);
   const isClosed = ["RENEWED", "CANCELLED", "LAPSED"].includes(renewal.status);
   const facts: [string, React.ReactNode][] = [
     ["Renewal date", renewal.renewalDate && renewal.renewalDate.getTime() !== 0 ? new Date(renewal.renewalDate).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "No date"],
     ...(days != null && isOpenStatus(renewal.status) && days <= 30
-      ? ([["Due", <span key="due" className={`font-medium ${dueTone(days)}`}>{days < 0 ? `${-days} ${days === -1 ? "day" : "days"} overdue` : days === 0 ? "Today" : `In ${days} ${days === 1 ? "day" : "days"}`}</span>]] as [string, React.ReactNode][])
+      ? ([["Due", <span key="due" className={`font-medium ${dueTone(days)}`}>{days < 0 ? `${-days} ${days === -1 ? "day" : "days"} overdue` : days === 0 ? "Today" : `In ${days} ${days === 1 ? "day" : "days"}`}{isStuck && <span title="Due soon, and nothing has happened for a week" className="ml-2 rounded-full bg-[#f6e7d3] px-1.5 py-px text-[0.6875rem] font-medium text-[#8a4f12] dark:bg-[#3a2a14] dark:text-[#e8b97c]">Stuck</span>}</span>]] as [string, React.ReactNode][])
       : []),
     ["Invoice total", money(renewal.invoiceTotal)],
     ...(lastYear
@@ -109,14 +107,9 @@ export default async function RenewalDetailPage({ params }: { params: { id: stri
           </span>,
         ]] as [string, React.ReactNode][])
       : []),
-    ...(renewal.statusChangedAt && !isClosed
-      ? ([["At this step", `${Math.max(0, Math.floor((Date.now() - renewal.statusChangedAt.getTime()) / 86_400_000))} days`]] as [string, React.ReactNode][])
-      : []),
     ["Adviser", renewal.assignedAdviser?.name || <span className="text-slate-500 dark:text-slate-400">Not assigned</span>],
     ["Underwriter", renewal.assignedUnderwriter?.name || <span className="text-slate-500 dark:text-slate-400">Not assigned</span>],
   ];
-
-  const latestNote = renewal.comments.length ? renewal.comments[renewal.comments.length - 1] : null;
 
   return (
       <main className="page" style={{ maxWidth: 1240 }}>
@@ -140,55 +133,7 @@ export default async function RenewalDetailPage({ params }: { params: { id: stri
           {isAdmin && <DeleteRenewalButton renewalId={renewal.id} clientName={renewal.clientName} />}
         </header>
 
-        {/* Where it is, what happens next, and the one action for the person looking at it. */}
-        {/* The latest note, so the most recent word on this renewal is the first thing seen. */}
-        <section aria-label="Latest note" className="card mb-5 grid lg:grid-cols-[minmax(0,1fr)_21rem]">
-          <div className="p-5 sm:p-6">
-            <p className="text-[0.75rem] text-slate-500 dark:text-slate-400">Latest note</p>
-            {latestNote ? (
-              <>
-                <p className="mt-1.5 line-clamp-3 max-w-[70ch] whitespace-pre-line text-[0.9375rem] leading-relaxed text-slate-900 dark:text-slate-100">{latestNote.body}</p>
-                <p className="mt-2 text-[0.8125rem] text-slate-500 dark:text-slate-400">
-                  {latestNote.author?.name ?? "Someone"},{" "}
-                  {latestNote.createdAt.toLocaleString("en-NZ", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "Pacific/Auckland" })}
-                  {renewal.comments.length > 1 && <span>. {renewal.comments.length - 1} earlier in Activity below.</span>}
-                </p>
-              </>
-            ) : (
-              <p className="mt-1.5 text-[0.9375rem] text-slate-500 dark:text-slate-400">No notes yet. Add one in Activity below.</p>
-            )}
-          </div>
-          <div id="status-control" className="border-t border-slate-200 bg-slate-50/60 p-5 dark:border-slate-800 dark:bg-slate-950/30 lg:rounded-r-xl lg:border-l lg:border-t-0">
-            {canChangeStatus ? (
-              <StatusControl
-                renewalId={renewal.id}
-                currentStatus={renewal.status}
-                role={session.user.role}
-                insurer={renewal.insurer}
-                invoiceTotal={renewal.invoiceTotal}
-                quotedPremium={renewal.quotedPremium}
-              />
-            ) : (
-              <div className="flex items-center justify-between">
-                <span className="text-[0.8125rem] text-slate-500">Status</span>
-                <StatusBadge status={renewal.status} />
-              </div>
-            )}
-          </div>
-        </section>
-
-        {risk && (
-          <p role="status" className="mb-5 rounded-xl border border-[#ecc9c2] bg-[#fbf0ee] px-4 py-3 text-[0.875rem] text-[#8a3326] dark:border-[#4a2a24] dark:bg-[#241614] dark:text-[#eda499]">
-            <strong className="font-medium">At risk.</strong> {risk}.
-          </p>
-        )}
-        {isStuck && !risk && (
-          <p role="status" className="mb-5 rounded-xl border border-[#ecd9bb] bg-[#fbf5ea] px-4 py-3 text-[0.875rem] text-[#7a4a12] dark:border-[#4a3a1f] dark:bg-[#241d12] dark:text-[#e8b97c]">
-            <strong className="font-medium">Stuck.</strong> Due soon, and nothing has happened for a week. Add a note or move it on.
-          </p>
-        )}
-
-        <dl className="card mb-8 grid grid-cols-2 divide-slate-200 dark:divide-slate-800 sm:grid-cols-3 lg:flex lg:divide-x">
+        <dl className="card mb-6 grid grid-cols-2 divide-slate-200 dark:divide-slate-800 sm:grid-cols-3 lg:flex lg:divide-x">
           {facts.map(([k, v]) => (
             <div key={k} className="min-w-0 flex-1 px-4 py-3">
               <dt className="text-[0.75rem] text-slate-500 dark:text-slate-400">{k}</dt>
@@ -197,11 +142,12 @@ export default async function RenewalDetailPage({ params }: { params: { id: stri
           ))}
         </dl>
 
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_21rem]">
+        {/* One page, no tabs. Activity is the main column, since notes are what people come here for; status,
+            follow-up and the policy details sit beside it. */}
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
           <div className="min-w-0">
-            <DetailTabs
-              noteCount={renewal.comments.length}
-              activity={
+            <Feature name="notes">
+              <div className="card p-5 sm:p-6">
                 <CommentThread
               renewalId={renewal.id}
               initialComments={renewal.comments.map((c) => ({
@@ -217,9 +163,59 @@ export default async function RenewalDetailPage({ params }: { params: { id: stri
                 createdAt: h.createdAt.toISOString(),
               }))}
             />
-              }
-              details={
-            <PolicyDetailsCard
+              </div>
+            </Feature>
+          </div>
+
+          <aside className="space-y-4">
+            <div id="status-control" className="card p-5">
+              {canChangeStatus ? (
+                <StatusControl
+                  renewalId={renewal.id}
+                  currentStatus={renewal.status}
+                  role={session.user.role}
+                  insurer={renewal.insurer}
+                  invoiceTotal={renewal.invoiceTotal}
+                  quotedPremium={renewal.quotedPremium}
+                />
+              ) : (
+                <div className="flex items-center justify-between">
+                  <span className="text-[0.8125rem] text-slate-500">Status</span>
+                  <StatusBadge status={renewal.status} />
+                </div>
+              )}
+            </div>
+
+            {!isClosed && (
+              <Feature name="follow_ups"><FollowUpCard
+                renewalId={renewal.id}
+                date={renewal.followUpAt ? renewal.followUpAt.toISOString() : null}
+                note={renewal.followUpNote}
+                canEdit={isAdmin || isOwner}
+                todayKey={nzToday().toISOString().slice(0, 10)}
+              /></Feature>
+            )}
+
+            {isClosed && (
+              <OutcomeCard
+                renewalId={renewal.id}
+                invoiceTotal={renewal.invoiceTotal}
+                currentInsurer={renewal.insurer}
+                canEdit={isAdmin || (session.user.role === "ADVISER" && renewal.assignedAdviserId === session.user.id)}
+                outcome={{
+                  status: renewal.status as any,
+                  premium: renewal.outcomePremium,
+                  insurer: renewal.outcomeInsurer,
+                  reason: renewal.outcomeReason,
+                  note: renewal.outcomeNote,
+                  at: renewal.outcomeAt ? renewal.outcomeAt.toISOString() : null,
+                  byName: renewal.outcomeBy?.name ?? null,
+                }}
+              />
+            )}
+
+            <div className="card p-5">
+              <PolicyDetailsCard
               renewal={{
                 id: renewal.id,
                 clientName: renewal.clientName,
@@ -248,39 +244,9 @@ export default async function RenewalDetailPage({ params }: { params: { id: stri
               }}
               canEdit={isAdmin || isOwner}
               isAdmin={isAdmin}
+                compact
             />
-              }
-            />
-          </div>
-
-          <aside className="space-y-6 lg:sticky lg:top-20 lg:self-start">
-            {!isClosed && (
-              <Feature name="follow_ups"><FollowUpCard
-                renewalId={renewal.id}
-                date={renewal.followUpAt ? renewal.followUpAt.toISOString() : null}
-                note={renewal.followUpNote}
-                canEdit={isAdmin || isOwner}
-                todayKey={nzToday().toISOString().slice(0, 10)}
-              /></Feature>
-            )}
-
-            {isClosed && (
-              <OutcomeCard
-                renewalId={renewal.id}
-                invoiceTotal={renewal.invoiceTotal}
-                currentInsurer={renewal.insurer}
-                canEdit={isAdmin || (session.user.role === "ADVISER" && renewal.assignedAdviserId === session.user.id)}
-                outcome={{
-                  status: renewal.status as any,
-                  premium: renewal.outcomePremium,
-                  insurer: renewal.outcomeInsurer,
-                  reason: renewal.outcomeReason,
-                  note: renewal.outcomeNote,
-                  at: renewal.outcomeAt ? renewal.outcomeAt.toISOString() : null,
-                  byName: renewal.outcomeBy?.name ?? null,
-                }}
-              />
-            )}
+            </div>
 
             <ClientPolicies
               rows={clientOthers.map((o) => ({

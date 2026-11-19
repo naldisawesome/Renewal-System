@@ -1,3 +1,16 @@
+# Update 2026-11-19: simpler renewal page, no tabs
+
+- **Activity is the main column.** Notes, changes and the note box are on the page straight away; no more switching
+  between Activity and Policy details tabs.
+- **Right column:** status with its one action, the next follow-up, the policy details as a simple list (nine
+  everyday fields, "Show all 15 details", Edit), then the client's other policies.
+- **Removed:** the Latest note box (Activity is visible anyway), the red "At risk" and "Stuck" banners (the Due
+  figure is already red when overdue, and a small "Stuck" tag now sits beside it), and the "At this step" figure.
+- `src/app/renewals/[id]/DetailTabs.tsx` is now an empty stub (listed in `DELETE-THESE-FILES.txt`). No database
+  changes.
+
+---
+
 # Update 2026-11-19: database check shows every part
 
 On Settings → System health, "Database connection" now opens like an accordion. Inside, each part of the database
