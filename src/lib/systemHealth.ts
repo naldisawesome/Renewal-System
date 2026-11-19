@@ -4,7 +4,45 @@ import { appUrl, emailConfigured, emailKindEnabled, isStaging, type EmailKind } 
 import { googleConfigured } from "@/lib/signInMethods";
 
 export type HealthStatus = "ok" | "warn" | "fail";
-export type HealthCheck = { id: string; label: string; status: HealthStatus; detail: string };
+export type HealthPart = { label: string; status: HealthStatus; detail: string };
+export type HealthCheck = { id: string; label: string; status: HealthStatus; detail: string; parts?: HealthPart[] };
+
+/** Every table the system keeps, in plain words, so the Database row can show exactly which part fails. */
+const TABLES: { label: string; read: () => Promise<unknown> }[] = [
+  { label: "Users and accounts", read: () => prisma.user.findFirst({ select: { id: true } }) },
+  { label: "Renewals", read: () => prisma.renewal.findFirst({ select: { id: true } }) },
+  { label: "Notes", read: () => prisma.comment.findFirst({ select: { id: true } }) },
+  { label: "Renewal history", read: () => prisma.renewalHistoryEntry.findFirst({ select: { id: true } }) },
+  { label: "Status changes", read: () => prisma.statusChange.findFirst({ select: { id: true } }) },
+  { label: "Notifications", read: () => prisma.notification.findFirst({ select: { id: true } }) },
+  { label: "Uploads", read: () => prisma.uploadBatch.findFirst({ select: { id: true } }) },
+  { label: "Upload changes (for Undo)", read: () => prisma.uploadChange.findFirst({ select: { id: true } }) },
+  { label: "Audit log", read: () => prisma.auditLog.findFirst({ select: { id: true } }) },
+  { label: "Announcements", read: () => prisma.announcement.findFirst({ select: { id: true } }) },
+  { label: "Problems", read: () => prisma.problemEvent.findFirst({ select: { id: true } }) },
+  { label: "Settings", read: () => prisma.appSetting.findFirst() },
+  { label: "Feature switches", read: () => prisma.featureFlag.findFirst() },
+  { label: "Sign-in protection (rate limits)", read: () => prisma.rateLimitEntry.findFirst() },
+  { label: "Saved views (no longer used)", read: () => prisma.savedView.findFirst({ select: { id: true } }) },
+];
+
+/** Reads one row from every table at the same time, timing each. */
+async function checkTables(): Promise<HealthPart[]> {
+  return Promise.all(
+    TABLES.map(async (t) => {
+      const start = Date.now();
+      try {
+        await t.read();
+        const ms = Date.now() - start;
+        return { label: t.label, status: (ms > 1500 ? "warn" : "ok") as HealthStatus, detail: ms > 1500 ? `Slow, ${ms}ms` : `Reachable, ${ms}ms` };
+      } catch (e) {
+        const msg = (e as Error).message || "";
+        const why = /does not exist/i.test(msg) ? "Table missing, the database may be out of date" : /permission/i.test(msg) ? "No permission to read" : "Not reachable";
+        return { label: t.label, status: "fail" as HealthStatus, detail: why };
+      }
+    })
+  );
+}
 
 function ago(ms: number): string {
   const mins = Math.round(ms / 60_000);
@@ -23,12 +61,27 @@ function ago(ms: number): string {
 export async function runSystemHealthChecks(): Promise<{ checks: HealthCheck[]; checkedAt: string }> {
   const checks: HealthCheck[] = [];
 
-  // Database: a trivial round trip, timed. Slow (not just broken) is worth flagging too.
+  // Database: a trivial round trip, timed, then one read from every table so a single broken table shows up.
   const dbStart = Date.now();
   try {
     await prisma.$queryRaw`SELECT 1`;
     const ms = Date.now() - dbStart;
-    checks.push({ id: "database", label: "Database connection", status: ms > 1500 ? "warn" : "ok", detail: ms > 1500 ? `Slow - responded in ${ms}ms` : `Responded in ${ms}ms` });
+    const parts = await checkTables();
+    const failed = parts.filter((p) => p.status === "fail").length;
+    const slow = parts.filter((p) => p.status === "warn").length;
+    checks.push({
+      id: "database",
+      label: "Database connection",
+      status: failed ? "fail" : slow || ms > 1500 ? "warn" : "ok",
+      detail: failed
+        ? `${failed} of ${parts.length} parts not reachable`
+        : slow
+          ? `${slow} of ${parts.length} parts slow`
+          : ms > 1500
+            ? `Slow - responded in ${ms}ms`
+            : `All ${parts.length} parts reachable, ${ms}ms`,
+      parts,
+    });
   } catch {
     checks.push({ id: "database", label: "Database connection", status: "fail", detail: "Could not reach the database" });
   }

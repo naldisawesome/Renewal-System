@@ -1,3 +1,14 @@
+# Update 2026-11-19: database check shows every part
+
+On Settings → System health, "Database connection" now opens like an accordion. Inside, each part of the database
+(users and accounts, renewals, notes, history, status changes, notifications, uploads, audit log, announcements,
+problems, settings, feature switches, sign-in protection, and the unused saved views) is read separately and shows
+Reachable with its time, Slow, or what is wrong ("Table missing, the database may be out of date", "No permission
+to read", "Not reachable"). The row's summary says how many parts fail, and it opens by itself when one does.
+Each check reads a single row, so it stays quick. No database changes. Tests: 173.
+
+---
+
 # Fix 2026-11-19: copying a policy number no longer adds "Policy"
 
 - Copying the policy number from a renewal page no longer brings a hidden "Policy" label with it.
